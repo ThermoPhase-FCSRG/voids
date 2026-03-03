@@ -1,0 +1,63 @@
+[workspace]
+name = "voids"
+version = "0.1.0"
+description = "Scientific Python package for pore network modeling (PNM)"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = ">=3.11,<3.13"
+numpy = ">=1.26"
+scipy = ">=1.11"
+h5py = ">=3.10"
+typing_extensions = ">=4.10"
+
+[pypi-dependencies]
+voids = { path = ".", editable = true }
+
+[tasks]
+lint = "ruff check src tests"
+format-check = "ruff format --check src tests"
+typecheck = "mypy src"
+test = "pytest -q"
+test-cov = "pytest --cov=voids --cov-report=term-missing"
+spec-check = "pytest -q tests/test_schema_network.py"
+examples-singlephase = "python -m voids.workflows.run_singlephase"
+precommit = "pre-commit run --all-files"
+
+[feature.dev.dependencies]
+pytest = ">=8.0"
+pytest-cov = ">=5.0"
+ruff = ">=0.6"
+mypy = ">=1.10"
+pre-commit = ">=3.7"
+ipython = ">=8.0"
+jupyterlab = ">=4.0"
+matplotlib = ">=3.8"
+
+[feature.interop.dependencies]
+scikit-image = ">=0.22"
+networkx = ">=3.2"
+
+[feature.interop.pypi-dependencies]
+porespy = ">=2.4"
+openpnm = ">=3.4"
+
+# Optional experimental backend feature sets (kept separate from validated core)
+[feature.torch.pypi-dependencies]
+torch = ">=2.3"
+# Optional graph tooling for future experiments
+torch-geometric = ">=2.5"
+
+[feature.jax.pypi-dependencies]
+jax = ">=0.4.30"
+jaxlib = ">=0.4.30"
+jaxopt = ">=0.8"
+
+[environments]
+default = { features = ["dev"], solve-group = "default" }
+core = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+interop = { features = ["dev", "interop"], solve-group = "default" }
+torch = { features = ["dev", "torch"], solve-group = "default" }
+jax = { features = ["dev", "jax"], solve-group = "default" }
