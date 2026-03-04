@@ -67,6 +67,8 @@ def test_rgb_with_opacity_leaves_non_rgb_colors_untouched() -> None:
 class _FakePolyData:
     """Minimal fake ``pyvista.PolyData`` implementation for unit tests."""
 
+    tube_should_raise = True
+
     def __init__(self, points, lines=None):
         """Store points, optional lines, and attached scalar data."""
 
@@ -75,16 +77,33 @@ class _FakePolyData:
         self.point_data: dict[str, np.ndarray] = {}
         self.cell_data: dict[str, np.ndarray] = {}
         self.active_scalars: tuple[str, str] | None = None
+        self.tube_kwargs: dict[str, object] | None = None
+        self.glyph_kwargs: dict[str, object] | None = None
 
     def set_active_scalars(self, name: str, preference: str = "point") -> None:
         """Record the active scalar selection."""
 
         self.active_scalars = (name, preference)
 
-    def tube(self, **_kwargs):
-        """Raise to exercise tube-rendering fallback logic."""
+    def tube(self, **kwargs):
+        """Either raise or return a copied tube mesh."""
 
-        raise RuntimeError("tube unavailable")
+        if type(self).tube_should_raise:
+            raise RuntimeError("tube unavailable")
+        out = _FakePolyData(self.points, lines=self.lines)
+        out.point_data = dict(self.point_data)
+        out.cell_data = dict(self.cell_data)
+        out.tube_kwargs = kwargs
+        return out
+
+    def glyph(self, **kwargs):
+        """Return a copied glyph mesh."""
+
+        out = _FakePolyData(self.points, lines=self.lines)
+        out.point_data = dict(self.point_data)
+        out.cell_data = dict(self.cell_data)
+        out.glyph_kwargs = kwargs
+        return out
 
 
 class _FakePlotter:
@@ -126,6 +145,12 @@ class _FakePV:
 
     PolyData = _FakePolyData
     Plotter = _FakePlotter
+
+    @staticmethod
+    def Sphere(radius: float = 0.5):
+        """Return a lightweight sphere descriptor for glyph tests."""
+
+        return {"kind": "sphere", "radius": radius}
 
 
 def test_line_cells_from_conns_requires_two_column_connectivity() -> None:
@@ -193,6 +218,58 @@ def test_plot_network_pyvista_falls_back_from_tubes_and_saves_screenshot(
     assert plotter.screenshots == [str(screenshot)]
     assert plotter.meshes[0][1]["scalars"] == "pore.scalar"
     assert plotter.meshes[1][1]["render_points_as_spheres"] is True
+
+
+def test_plotly_auto_sizes_markers_and_throats_from_characteristic_diameters(line_network) -> None:
+    """Test automatic Plotly pore/throat size rendering from characteristic diameters."""
+
+    line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 4.0])
+    line_network.throat["diameter_equivalent"] = np.array([0.5, 1.5])
+
+    fig = plot_network_plotly(line_network, point_scalars="volume")
+
+    marker_sizes = np.asarray(fig.data[0].marker.size, dtype=float)
+    assert np.allclose(marker_sizes, np.array([3.0, 6.0, 12.0]))
+    assert "pore.diameter_equivalent=1.000e+00" in fig.data[0].text[0]
+    assert fig.data[1].line.width == pytest.approx(1.0)
+    assert fig.data[2].line.width == pytest.approx(3.0)
+    assert "throat.diameter_equivalent=5.000e-01" in fig.data[1].text
+
+
+def test_plotly_explicit_constant_sizes_override_auto_size_fields(line_network) -> None:
+    """Test constant Plotly point and throat widths even when size fields exist."""
+
+    line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 4.0])
+    line_network.throat["diameter_equivalent"] = np.array([0.5, 1.5])
+
+    fig = plot_network_plotly(line_network, point_size=10.0, line_width=4.0)
+
+    assert fig.data[0].marker.size == pytest.approx(10.0)
+    assert fig.data[1].line.width == pytest.approx(4.0)
+    assert fig.data[2].line.width == pytest.approx(4.0)
+
+
+def test_plot_network_pyvista_auto_sizes_points_and_throats(monkeypatch, line_network) -> None:
+    """Test automatic PyVista sphere and tube sizing from characteristic diameters."""
+
+    monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
+    _FakePolyData.tube_should_raise = False
+    line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 4.0])
+    line_network.throat["diameter_equivalent"] = np.array([0.5, 1.5])
+
+    try:
+        plotter, poly = plot_network_pyvista(line_network, point_scalars="volume")
+    finally:
+        _FakePolyData.tube_should_raise = True
+
+    assert np.array_equal(poly.point_data["pore.render_diameter"], np.array([1.0, 2.0, 4.0]))
+    assert np.array_equal(poly.cell_data["throat.render_radius"], np.array([0.25, 0.75]))
+    assert plotter.meshes[0][0].tube_kwargs == {
+        "scalars": "throat.render_radius",
+        "absolute": True,
+        "preference": "cell",
+    }
+    assert plotter.meshes[1][0].glyph_kwargs["scale"] == "pore.render_diameter"
 
 
 def test_run_singlephase_main_regression(capsys, data_regression) -> None:

@@ -213,7 +213,7 @@ def test_petrophysics_error_and_wrapper_paths(
 
     missing = line_network.copy()
     missing.throat.pop("volume")
-    with pytest.raises(KeyError, match="Both pore.volume and throat.volume are required"):
+    with pytest.raises(KeyError, match="pore.region_volume, or both pore.volume and throat.volume"):
         absolute_porosity(missing)
 
     with pytest.raises(ValueError, match="Unsupported effective porosity mode"):
@@ -264,3 +264,20 @@ def test_singlephase_dirichlet_vector_and_solver_branches(line_network: Network)
             bc=PressureBC("inlet_xmin", "outlet_xmax", pin=1.0, pout=1.0),
             axis="x",
         )
+
+
+def test_singlephase_ignores_floating_components(branched_network: Network) -> None:
+    """Solve remains well-posed when disconnected pores lack boundary conditions."""
+
+    result = solve(
+        branched_network,
+        fluid=FluidSinglePhase(viscosity=1.0),
+        bc=PressureBC("inlet_xmin", "outlet_xmax", pin=1.0, pout=0.0),
+        axis="x",
+    )
+
+    assert np.isfinite(result.total_flow_rate)
+    assert np.isfinite(result.permeability["x"])
+    assert np.isnan(result.pore_pressure[4])
+    assert np.isnan(result.throat_flux).sum() == 0
+    assert np.isclose(result.throat_flux[2], 0.0)

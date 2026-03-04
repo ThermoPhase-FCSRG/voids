@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from voids.core.network import Network
+from voids.core.sample import SampleGeometry
 from voids.physics.petrophysics import absolute_porosity, effective_porosity
 
 
@@ -26,3 +28,25 @@ def test_effective_porosity_boundary_mode(line_network):
 
     phi_eff = effective_porosity(line_network)
     assert np.isclose(phi_eff, 0.4)
+
+
+def test_porosity_prefers_region_volume_for_voxel_extracted_networks():
+    """Use region-volume bookkeeping when segmented pore regions are available."""
+
+    net = Network(
+        throat_conns=np.array([[0, 1]], dtype=int),
+        pore_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=float),
+        sample=SampleGeometry(bulk_volume=10.0),
+        pore={
+            "region_volume": np.array([2.0, 3.0]),
+            "volume": np.array([2.0, 3.0]),
+        },
+        throat={"volume": np.array([7.0])},
+        pore_labels={
+            "inlet_xmin": np.array([True, False]),
+            "outlet_xmax": np.array([False, True]),
+        },
+    )
+
+    assert np.isclose(absolute_porosity(net), 0.5)
+    assert np.isclose(effective_porosity(net, axis="x"), 0.5)
