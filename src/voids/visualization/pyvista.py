@@ -119,10 +119,7 @@ def plot_network_pyvista(
     )
 
     if notebook is None:
-        try:
-            notebook = False
-        except Exception:
-            notebook = False
+        notebook = False
     pl = pv.Plotter(off_screen=off_screen, notebook=notebook)
 
     # Prefer explicit throat/cell scalars for lines, then fall back to pore/point scalars.

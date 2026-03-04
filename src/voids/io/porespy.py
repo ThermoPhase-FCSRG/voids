@@ -259,10 +259,10 @@ def from_porespy(
             extra[key] = value
 
     if throat_conns is None or pore_coords is None:
-        if strict:
-            raise KeyError("Required keys 'throat.conns' and/or 'pore.coords' missing")
         throat_conns = np.asarray(network_dict.get("throat.conns"))
         pore_coords = np.asarray(network_dict.get("pore.coords"), dtype=float)
+        if throat_conns.ndim == 0 or pore_coords.ndim == 0:
+            raise KeyError("Required keys 'throat.conns' and/or 'pore.coords' missing")
 
     if pore_coords.ndim == 2 and pore_coords.shape[1] == 2:
         pore_coords = np.column_stack([pore_coords, np.zeros(pore_coords.shape[0])])
@@ -274,11 +274,8 @@ def from_porespy(
     _derive_missing_geometry(pore_data, throat_data)
 
     # Gentle warning for unsupported nested conduit arrays often present in OpenPNM
-    if (
-        "throat.hydraulic_size_factors" in network_dict
-        and "hydraulic_size_factors" not in throat_data
-    ):
-        extra["throat.hydraulic_size_factors"] = network_dict["throat.hydraulic_size_factors"]
+    if "hydraulic_size_factors" in throat_data:
+        extra["throat.hydraulic_size_factors"] = throat_data.pop("hydraulic_size_factors")
         warnings.warn(
             "Stored throat.hydraulic_size_factors in net.extra (no v0.1 solver integration yet)",
             RuntimeWarning,

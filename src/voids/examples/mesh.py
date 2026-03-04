@@ -154,7 +154,7 @@ def make_cartesian_mesh_network(
     throat_area_scalar = np.pi * throat_radius**2
     throat_perimeter_scalar = 2.0 * np.pi * throat_radius
     throat_core_length_scalar = spacing - 2.0 * pore_radius
-    if throat_core_length_scalar <= 0:
+    if throat_core_length_scalar <= 0:  # pragma: no cover - guarded by pore_radius < spacing / 2
         raise ValueError(
             "pore_radius is too large relative to spacing; throat core length must stay positive"
         )
