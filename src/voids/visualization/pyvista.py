@@ -8,6 +8,19 @@ from voids.core.network import Network
 
 
 def _require_pyvista():
+    """Import PyVista lazily.
+
+    Returns
+    -------
+    module
+        Imported :mod:`pyvista` module.
+
+    Raises
+    ------
+    ImportError
+        If PyVista is not installed.
+    """
+
     try:
         import pyvista as pv
     except Exception as exc:  # pragma: no cover - optional dependency
@@ -18,6 +31,29 @@ def _require_pyvista():
 
 
 def _line_cells_from_conns(conns: np.ndarray) -> np.ndarray:
+    """Convert throat connections to VTK polyline cell encoding.
+
+    Parameters
+    ----------
+    conns :
+        Integer array with shape ``(Nt, 2)``.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flat cell array suitable for ``pyvista.PolyData(lines=...)``.
+
+    Raises
+    ------
+    ValueError
+        If ``conns`` does not have shape ``(Nt, 2)``.
+
+    Notes
+    -----
+    Each throat line is stored as ``[2, i, j]``, where the leading ``2`` indicates
+    the number of points in the polyline cell.
+    """
+
     conns = np.asarray(conns, dtype=np.int64)
     if conns.ndim != 2 or conns.shape[1] != 2:
         raise ValueError("throat connections must have shape (Nt, 2)")
@@ -34,22 +70,37 @@ def network_to_pyvista_polydata(
     cell_scalars: str | np.ndarray | None = None,
     include_all_numeric_fields: bool = False,
 ):
-    """Return a ``pyvista.PolyData`` representing pores (points) and throats (lines).
+    """Convert a network to ``pyvista.PolyData``.
 
     Parameters
     ----------
-    point_scalars, cell_scalars
-        Either a field name (e.g. ``"volume"``) from ``net.pore``/``net.throat`` or an array.
-    include_all_numeric_fields
-        If True, attach all 1D numeric pore/throat arrays as point/cell data when lengths match.
+    net :
+        Network to convert.
+    point_scalars, cell_scalars :
+        Pore/throat scalar field name or explicit array.
+    include_all_numeric_fields :
+        If ``True``, attach every 1D numeric pore/throat array whose length matches
+        ``Np`` or ``Nt``.
+
+    Returns
+    -------
+    pyvista.PolyData
+        PolyData with pores as points and throats as line cells.
+
+    Raises
+    ------
+    KeyError
+        If a requested scalar field name is missing.
+    ValueError
+        If an explicit scalar array has the wrong shape.
     """
+
     pv = _require_pyvista()
 
     points = np.asarray(net.pore_coords, dtype=float)
     line_cells = _line_cells_from_conns(net.throat_conns)
     poly = pv.PolyData(points, lines=line_cells)
 
-    # Canonical identifiers for easier debugging and selections
     poly.point_data["pore.id"] = np.arange(net.Np, dtype=np.int64)
     poly.cell_data["throat.id"] = np.arange(net.Nt, dtype=np.int64)
 
@@ -105,11 +156,51 @@ def plot_network_pyvista(
     notebook: bool | None = None,
     **add_mesh_kwargs: Any,
 ):
-    """Plot the pore network using PyVista and return ``(plotter, polydata)``.
+    """Render a pore network with PyVista.
 
-    The function is intentionally lightweight and works as an optional convenience wrapper.
-    Use ``network_to_pyvista_polydata`` for advanced visualization workflows.
+    Parameters
+    ----------
+    net :
+        Network to render.
+    point_scalars, cell_scalars :
+        Pore/throat scalar field name or explicit array.
+    show_points, show_lines :
+        Toggle pore and throat rendering.
+    line_width :
+        Width used for line rendering.
+    point_size :
+        Marker size used for pores.
+    render_tubes :
+        If ``True``, convert throats from lines to tubes.
+    tube_radius :
+        Optional tube radius when ``render_tubes`` is enabled.
+    off_screen :
+        If ``True``, create an off-screen plotter for headless rendering.
+    screenshot :
+        Optional screenshot output path. When provided, the plot is rendered and saved.
+    show_axes :
+        If ``True``, display orientation axes.
+    notebook :
+        Optional PyVista notebook flag. Defaults to ``False`` when omitted.
+    **add_mesh_kwargs :
+        Additional keyword arguments forwarded to :meth:`pyvista.Plotter.add_mesh`.
+
+    Returns
+    -------
+    tuple
+        Pair ``(plotter, polydata)``.
+
+    Notes
+    -----
+    For throat rendering, scalar selection follows this priority:
+
+    1. explicit throat/cell scalar data
+    2. pore/point scalar data, reused on the line representation
+
+    This allows pore-defined pressure fields to color both pores and throats in a
+    consistent network visualization.
     """
+
     pv = _require_pyvista()
     poly = network_to_pyvista_polydata(
         net,
@@ -122,7 +213,6 @@ def plot_network_pyvista(
         notebook = False
     pl = pv.Plotter(off_screen=off_screen, notebook=notebook)
 
-    # Prefer explicit throat/cell scalars for lines, then fall back to pore/point scalars.
     line_scalars_name = "throat.scalar" if "throat.scalar" in poly.cell_data else None
     point_scalars_name = "pore.scalar" if "pore.scalar" in poly.point_data else None
     if line_scalars_name is None and point_scalars_name is not None:

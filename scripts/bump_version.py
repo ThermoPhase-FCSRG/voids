@@ -12,6 +12,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 @dataclass(frozen=True)
 class VersionTarget:
+    """Describe one file location that stores the package version."""
+
     path: Path
     kind: str
     section: str | None = None
@@ -25,6 +27,8 @@ TARGETS = (
 
 
 def _replace_toml_section_version(text: str, *, section: str, new_version: str) -> tuple[str, str]:
+    """Replace the version string inside a specific TOML section."""
+
     lines = text.splitlines(keepends=True)
     in_section = False
 
@@ -56,6 +60,8 @@ def _replace_toml_section_version(text: str, *, section: str, new_version: str) 
 
 
 def _replace_python_version(text: str, *, new_version: str) -> tuple[str, str]:
+    """Replace the ``__version__`` assignment in a Python source file."""
+
     match = re.search(r'(?m)^(__version__\s*=\s*")([^"]+)(")$', text)
     if match is None:
         raise RuntimeError("Could not find __version__ assignment in src/voids/version.py")
@@ -67,6 +73,8 @@ def _replace_python_version(text: str, *, new_version: str) -> tuple[str, str]:
 
 
 def _update_target(target: VersionTarget, *, new_version: str) -> tuple[str, str]:
+    """Apply the appropriate version-replacement strategy for one target."""
+
     text = target.path.read_text(encoding="utf-8")
     if target.kind == "toml-section":
         if target.section is None:
@@ -78,6 +86,8 @@ def _update_target(target: VersionTarget, *, new_version: str) -> tuple[str, str
 
 
 def _parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the version bump script."""
+
     parser = argparse.ArgumentParser(
         description="Update the package version consistently across project metadata files."
     )
@@ -91,6 +101,8 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Update all authoritative project version declarations consistently."""
+
     args = _parse_args()
     new_version = args.version.strip()
     if not new_version or any(ch.isspace() for ch in new_version):

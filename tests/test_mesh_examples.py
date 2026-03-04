@@ -7,6 +7,8 @@ from voids.physics.singlephase import FluidSinglePhase, PressureBC, solve
 
 
 def test_make_cartesian_mesh_network_2d_topology() -> None:
+    """Test topology, labels, and sample geometry of a 2D Cartesian mesh."""
+
     net = make_cartesian_mesh_network((4, 3), spacing=2.0, thickness=1.5)
 
     assert net.Np == 12
@@ -24,6 +26,8 @@ def test_make_cartesian_mesh_network_2d_topology() -> None:
 
 
 def test_make_cartesian_mesh_network_3d_topology() -> None:
+    """Test topology, labels, and sample geometry of a 3D Cartesian mesh."""
+
     net = make_cartesian_mesh_network((3, 4, 2), spacing=1.5)
 
     assert net.Np == 24
@@ -36,6 +40,8 @@ def test_make_cartesian_mesh_network_3d_topology() -> None:
 
 
 def test_make_cartesian_mesh_network_supports_singlephase_solve() -> None:
+    """Test that the Cartesian mesh example produces the expected pressure field."""
+
     net = make_cartesian_mesh_network((5, 4), spacing=1.0)
     result = solve(
         net,

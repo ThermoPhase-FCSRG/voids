@@ -7,6 +7,16 @@ from voids.physics.singlephase import FluidSinglePhase, PressureBC, solve
 
 
 def main() -> None:
+    """Run the canonical single-phase demonstration workflow and print JSON.
+
+    Notes
+    -----
+    The workflow builds the default linear-chain example, solves steady
+    single-phase flow along the x-direction, and prints a compact JSON summary
+    containing total flow rate, permeability, residual norm, mass-balance error,
+    and pore pressures.
+    """
+
     net = make_linear_chain_network()
     result = solve(
         net,

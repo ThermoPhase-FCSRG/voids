@@ -16,21 +16,57 @@ def assert_finite(name: str, arr: np.ndarray) -> None:
 
     Parameters
     ----------
-    name : str
-        Descriptive name of the array (for error messages).
-    arr : np.ndarray
+    name :
+        Descriptive name of the array, used in the error message.
+    arr :
         Array to validate.
 
     Raises
     ------
     ValueError
-        If the array contains non-finite values (NaN or inf).
+        If the array contains ``NaN`` or infinite values.
     """
+
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{name} contains non-finite values")
 
 
 def validate_network(net: Network, *, allow_parallel_throats: bool = True) -> None:
+    """Validate network topology, field shapes, and basic geometric sanity.
+
+    Parameters
+    ----------
+    net :
+        Network to validate.
+    allow_parallel_throats :
+        If ``False``, repeated pore pairs are treated as an error. If ``True``,
+        repeated pairs are accepted but reported with a warning.
+
+    Raises
+    ------
+    ValueError
+        If topology, field shapes, or sign conventions are invalid.
+
+    Warns
+    -----
+    RuntimeWarning
+        If parallel throats are detected while allowed, or if recommended pore
+        and throat fields are missing.
+
+    Notes
+    -----
+    The checks enforce structural constraints such as
+
+    ``throat_conns.shape == (Nt, 2)``
+
+    and
+
+    ``pore_coords.shape == (Np, 3)``
+
+    together with sign and dimensionality checks for commonly used geometric
+    quantities such as volume, area, and conduit lengths.
+    """
+
     tc = net.throat_conns
     if tc.ndim != 2 or tc.shape[1] != 2:
         raise ValueError("throat_conns must have shape (Nt, 2)")
@@ -87,7 +123,6 @@ def validate_network(net: Network, *, allow_parallel_throats: bool = True) -> No
             raise ValueError(f"Throat label '{label}' has wrong shape")
 
     if net.sample is not None:
-        # Only sanity-check if provided
         try:
             bv = net.sample.resolved_bulk_volume()
             if bv <= 0:

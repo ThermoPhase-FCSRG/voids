@@ -7,6 +7,8 @@ from voids.io.porespy import ensure_cartesian_boundary_labels, from_porespy, sca
 
 
 def test_from_porespy_maps_openpnm_aliases_and_derives_fields() -> None:
+    """Test alias normalization and derived-field construction during PoreSpy import."""
+
     d = {
         "pore.coords": np.array([[0, 0, 0], [1, 0, 0]], dtype=float),
         "throat.conns": np.array([[0, 1]], dtype=int),
@@ -39,6 +41,8 @@ def test_from_porespy_maps_openpnm_aliases_and_derives_fields() -> None:
 
 
 def test_scale_porespy_geometry_and_infer_boundaries() -> None:
+    """Test voxel-to-physical scaling and simple Cartesian boundary inference."""
+
     d = {
         "pore.coords": np.array([[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]], dtype=float),
         "throat.conns": np.array([[0, 1]], dtype=int),

@@ -9,11 +9,28 @@ from voids.io.porespy import from_porespy
 
 
 def to_openpnm_dict(net: Network, *, include_extra: bool = False) -> dict[str, Any]:
-    """Export a :class:`voids.core.network.Network` to an OpenPNM/PoreSpy-style dict.
+    """Export a network to an OpenPNM/PoreSpy-style flat dictionary.
 
-    This is intended for lightweight interoperability and cross-check workflows.
-    It preserves the canonical keys used by :func:`voids.io.porespy.from_porespy`.
+    Parameters
+    ----------
+    net :
+        Network to export.
+    include_extra :
+        If ``True``, merge ``net.extra`` into the output dictionary.
+
+    Returns
+    -------
+    dict of str to Any
+        Flat mapping using keys such as ``"pore.coords"`` and ``"throat.conns"``.
+
+    Notes
+    -----
+    The mapping preserves aliases expected by :func:`voids.io.porespy.from_porespy`.
+    Conduit-length fields are emitted both under their internal names
+    (for round-tripping within ``voids``) and under OpenPNM-style names
+    such as ``throat.conduit_lengths.pore1``.
     """
+
     out: dict[str, Any] = {
         "pore.coords": np.asarray(net.pore_coords, dtype=float).copy(),
         "throat.conns": np.asarray(net.throat_conns, dtype=int).copy(),
@@ -45,11 +62,39 @@ def to_openpnm_network(
     copy_labels: bool = True,
     include_extra: bool = False,
 ):
-    """Convert a :class:`Network` into an OpenPNM network object (optional dependency).
+    """Convert a :class:`Network` into an OpenPNM network object.
 
-    The constructor and data-assignment APIs vary slightly across OpenPNM versions, so this
-    helper is intentionally defensive and should be used in optional interoperability paths.
+    Parameters
+    ----------
+    net :
+        Network to convert.
+    copy_properties :
+        If ``True``, copy numeric pore and throat properties into the OpenPNM object.
+    copy_labels :
+        If ``True``, copy pore and throat boolean labels.
+    include_extra :
+        If ``True``, attempt to copy entries from ``net.extra`` whose keys already
+        follow the ``pore.*`` or ``throat.*`` naming convention.
+
+    Returns
+    -------
+    Any
+        OpenPNM network object. The precise class depends on the installed OpenPNM version.
+
+    Raises
+    ------
+    ImportError
+        If OpenPNM is not installed.
+    RuntimeError
+        If a compatible OpenPNM network object cannot be instantiated.
+
+    Notes
+    -----
+    OpenPNM's constructor signatures vary across versions. This helper tries a small
+    set of known call patterns and always assigns ``pore.coords`` and
+    ``throat.conns`` explicitly afterward so that topology transfer is version-robust.
     """
+
     try:
         import openpnm as op
     except Exception as exc:  # pragma: no cover - optional dependency
@@ -73,7 +118,6 @@ def to_openpnm_network(
     if pn is None:  # pragma: no cover
         raise RuntimeError(f"Unable to instantiate OpenPNM Network: {errs!r}")
 
-    # Always assign topology explicitly to be version-robust
     pn["pore.coords"] = coords
     pn["throat.conns"] = conns
 

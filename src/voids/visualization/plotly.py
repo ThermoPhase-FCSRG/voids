@@ -9,6 +9,19 @@ from voids.core.network import Network
 
 
 def _require_plotly():
+    """Import Plotly lazily.
+
+    Returns
+    -------
+    tuple
+        ``(plotly.graph_objects, plotly.colors.sample_colorscale)``.
+
+    Raises
+    ------
+    ImportError
+        If Plotly is not installed.
+    """
+
     try:
         import plotly.graph_objects as go
         from plotly.colors import sample_colorscale
@@ -26,6 +39,32 @@ def _resolve_scalars(
     expected_shape: tuple[int, ...],
     prefix: str,
 ) -> tuple[np.ndarray | None, str | None]:
+    """Resolve scalar input from a field name or explicit array.
+
+    Parameters
+    ----------
+    values :
+        Field name, explicit array, or ``None``.
+    store :
+        Property dictionary used when ``values`` is a field name.
+    expected_shape :
+        Expected array shape.
+    prefix :
+        Name prefix used in error messages and labels.
+
+    Returns
+    -------
+    tuple
+        Pair ``(array, label)``. Both entries are ``None`` when no scalars are requested.
+
+    Raises
+    ------
+    KeyError
+        If a requested field name is missing.
+    ValueError
+        If an explicit array has the wrong shape.
+    """
+
     if values is None:
         return None, None
     if isinstance(values, str):
@@ -39,6 +78,22 @@ def _resolve_scalars(
 
 
 def _sample_indices(count: int, max_count: int | None) -> np.ndarray:
+    """Return evenly spaced sample indices.
+
+    Parameters
+    ----------
+    count :
+        Total number of items.
+    max_count :
+        Maximum number of sampled items. If ``None``, keep all.
+
+    Returns
+    -------
+    numpy.ndarray
+        Integer indices. When downsampling is needed, the spacing is approximately
+        ``count / max_count``.
+    """
+
     if max_count is None or count <= max_count:
         return np.arange(count, dtype=np.int64)
     step = max(1, ceil(count / max_count))
@@ -46,12 +101,40 @@ def _sample_indices(count: int, max_count: int | None) -> np.ndarray:
 
 
 def _rgb_with_opacity(color: str, opacity: float) -> str:
+    """Attach opacity to an RGB color string.
+
+    Parameters
+    ----------
+    color :
+        Plotly-style ``rgb(r,g,b)`` string.
+    opacity :
+        Desired opacity.
+
+    Returns
+    -------
+    str
+        ``rgba(r,g,b,a)`` string when possible, otherwise the original color.
+    """
+
     if color.startswith("rgb("):
         return "rgba(" + color[4:-1] + f",{opacity})"
     return color
 
 
 def _scalar_bounds(values: np.ndarray | None) -> tuple[float | None, float | None]:
+    """Return scalar bounds for color normalization.
+
+    Parameters
+    ----------
+    values :
+        Scalar array or ``None``.
+
+    Returns
+    -------
+    tuple
+        ``(vmin, vmax)`` or ``(None, None)`` when no valid values are present.
+    """
+
     if values is None or values.size == 0:
         return None, None
     return float(np.min(values)), float(np.max(values))
@@ -70,11 +153,45 @@ def plot_network_plotly(
     show_colorbar: bool = True,
     layout_kwargs: dict[str, Any] | None = None,
 ):
-    """Return a Plotly figure for a pore-throat network.
+    """Create an interactive Plotly visualization of a pore-throat network.
 
-    If only point scalars are supplied, throat colors are computed from the mean scalar
-    at the two connected pores. For large networks, the throat rendering is sampled to
-    at most ``max_throats`` connections to keep the figure responsive.
+    Parameters
+    ----------
+    net :
+        Network to render.
+    point_scalars :
+        Pore field name or explicit pore-valued array with shape ``(Np,)``.
+    cell_scalars :
+        Throat field name or explicit throat-valued array with shape ``(Nt,)``.
+    point_size :
+        Marker size for pores. If omitted, a size is chosen heuristically.
+    line_width :
+        Plotly line width used for throats.
+    line_opacity :
+        Opacity applied to throat lines.
+    max_throats :
+        Maximum number of throats to draw. Large networks are downsampled for responsiveness.
+    title :
+        Figure title.
+    show_colorbar :
+        If ``True``, display a colorbar for pore scalars.
+    layout_kwargs :
+        Optional Plotly layout overrides.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        Interactive 3D figure.
+
+    Notes
+    -----
+    If only pore scalars are given, each throat is colored by the arithmetic mean of
+    its endpoint pore values:
+
+    ``s_throat = 0.5 * (s_i + s_j)``
+
+    The throat colormap is normalized with the same scalar bounds as the pore markers
+    so that equal numerical values map to equal colors across pores and throats.
     """
 
     go, sample_colorscale = _require_plotly()
@@ -136,7 +253,6 @@ def plot_network_plotly(
         conns = net.throat_conns[sampled]
         throat_values = 0.5 * (point_values[conns[:, 0]] + point_values[conns[:, 1]])
         throat_label = f"avg({point_label or 'pore scalar'})"
-        # Use the pore-scalar bounds so throat colors remain consistent with pore colors.
         color_vmin, color_vmax = point_vmin, point_vmax
     else:
         throat_values = None

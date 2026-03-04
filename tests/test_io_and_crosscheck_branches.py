@@ -18,6 +18,8 @@ from voids.physics.singlephase import FluidSinglePhase, PressureBC
 
 
 def test_scale_porespy_geometry_scales_and_derives_common_fields() -> None:
+    """Test common geometric scaling rules and derived throat volume."""
+
     raw = {
         "pore.coords": np.array([[0.0, 2.0], [4.0, 6.0]]),
         "pore.cross_sectional_area": np.array([2.0, 3.0]),
@@ -39,11 +41,15 @@ def test_scale_porespy_geometry_scales_and_derives_common_fields() -> None:
 
 
 def test_scale_porespy_geometry_requires_positive_voxel_size() -> None:
+    """Test rejection of nonpositive voxel size during PoreSpy scaling."""
+
     with pytest.raises(ValueError, match="voxel_size must be positive"):
         scale_porespy_geometry({}, voxel_size=0.0)
 
 
 def test_ensure_cartesian_boundary_labels_validates_inputs_and_preserves_existing_labels() -> None:
+    """Test input validation and label preservation in Cartesian boundary inference."""
+
     with pytest.raises(ValueError, match="pore.coords must have shape"):
         ensure_cartesian_boundary_labels({"pore.coords": np.array([1.0, 2.0])})
     with pytest.raises(ValueError, match="tol_fraction must be nonnegative"):
@@ -65,6 +71,8 @@ def test_ensure_cartesian_boundary_labels_validates_inputs_and_preserves_existin
 
 
 def test_from_porespy_handles_strict_and_non_strict_paths() -> None:
+    """Test strict and non-strict missing-topology paths in the PoreSpy importer."""
+
     with pytest.raises(KeyError, match="must include 'throat.conns' and 'pore.coords'"):
         from_porespy({}, strict=True)
 
@@ -78,6 +86,8 @@ def test_from_porespy_handles_strict_and_non_strict_paths() -> None:
 
 
 def test_from_porespy_derives_geometry_aliases_and_warns_for_unsupported_size_factors() -> None:
+    """Test alias handling, geometry derivation, and unsupported-factor warnings."""
+
     net_dict = {
         "throat.conns": np.array([[0, 1]], dtype=int),
         "pore.coords": np.array([[0.0, 0.0], [1.0, 0.0]], dtype=float),
@@ -109,6 +119,8 @@ def test_from_porespy_derives_geometry_aliases_and_warns_for_unsupported_size_fa
 
 
 def test_from_porespy_handles_dotted_passthrough_fields_and_diameter_based_area() -> None:
+    """Test dotted key normalization and diameter-based area derivation."""
+
     net = from_porespy(
         {
             "throat.conns": np.array([[0, 1]], dtype=int),
@@ -131,10 +143,14 @@ def test_from_porespy_handles_dotted_passthrough_fields_and_diameter_based_area(
 
 
 class _DictNetwork(dict):
+    """Dictionary subclass used to mimic OpenPNM network objects in tests."""
+
     pass
 
 
 def test_to_openpnm_dict_includes_aliases_and_extra() -> None:
+    """Test OpenPNM-style dict export, including aliases and extra metadata."""
+
     net = make_cartesian_mesh_network((3, 3))
     net.extra["pore.extra_field"] = np.arange(net.Np, dtype=float)
     net.throat_labels["boundary_throat"] = np.zeros(net.Nt, dtype=bool)
@@ -153,12 +169,22 @@ def test_to_openpnm_dict_includes_aliases_and_extra() -> None:
 def test_to_openpnm_network_handles_constructor_fallback_and_tolerates_bad_extra(
     monkeypatch, line_network
 ) -> None:
+    """Test OpenPNM network construction fallback and tolerant extra-field copying."""
+
     class BadExtra:
+        """Object that intentionally fails NumPy array conversion."""
+
         def __array__(self, *_args, **_kwargs):
+            """Raise a conversion error to exercise tolerant extra handling."""
+
             raise TypeError("cannot convert")
 
     class FakeNetwork(_DictNetwork):
+        """Minimal fake OpenPNM network that rejects keyword construction."""
+
         def __init__(self, *args, **kwargs):
+            """Initialize the fake network and reject keyword arguments."""
+
             if kwargs:
                 raise TypeError("kwargs unsupported")
             super().__init__()
@@ -184,8 +210,14 @@ def test_to_openpnm_network_handles_constructor_fallback_and_tolerates_bad_extra
 
 
 def test_to_openpnm_network_copies_properties_and_labels(monkeypatch, line_network) -> None:
+    """Test copying of pore/throat properties and labels into an OpenPNM object."""
+
     class FakeNetwork(_DictNetwork):
+        """Minimal fake OpenPNM network accepting arbitrary construction."""
+
         def __init__(self, *args, **kwargs):
+            """Initialize the fake network."""
+
             super().__init__()
 
     line_network.throat_labels["boundary_throat"] = np.array([True, False])
@@ -201,6 +233,8 @@ def test_to_openpnm_network_copies_properties_and_labels(monkeypatch, line_netwo
 
 
 def test_openpnm_phase_factory_uses_fallback_and_errors_cleanly() -> None:
+    """Test phase-constructor fallback logic for multiple OpenPNM APIs."""
+
     fake_op = types.SimpleNamespace(
         phase=types.SimpleNamespace(
             Phase=lambda network: (_ for _ in ()).throw(RuntimeError("nope"))
@@ -222,7 +256,11 @@ def test_openpnm_phase_factory_uses_fallback_and_errors_cleanly() -> None:
 
 
 def test_get_openpnm_pressure_supports_both_access_patterns_and_errors_cleanly() -> None:
+    """Test pressure extraction from multiple OpenPNM result access patterns."""
+
     class MappingOnly(dict):
+        """Fake result object exposing mapping-style pressure access only."""
+
         soln = {}
 
     assert np.array_equal(
@@ -230,17 +268,25 @@ def test_get_openpnm_pressure_supports_both_access_patterns_and_errors_cleanly()
     )
 
     class SolnOnly(dict):
+        """Fake result object exposing solution-container pressure access only."""
+
         soln = {"pore.pressure": [2.0, 1.0]}
 
         def __getitem__(self, key):
+            """Reject direct item access to force the fallback path."""
+
             raise KeyError(key)
 
     assert np.array_equal(_get_openpnm_pressure(SolnOnly()), [2.0, 1.0])
 
     class BadResult(dict):
+        """Fake result object exposing malformed pressure data."""
+
         soln = {"pore.pressure": [[1.0, 0.0]]}
 
         def __getitem__(self, key):
+            """Reject direct item access to force malformed fallback data."""
+
             raise KeyError(key)
 
     with pytest.raises(RuntimeError, match="Unable to extract pore pressures"):
@@ -250,25 +296,41 @@ def test_get_openpnm_pressure_supports_both_access_patterns_and_errors_cleanly()
 def test_crosscheck_singlephase_with_openpnm_supports_set_bc_compatibility(
     monkeypatch, line_network
 ) -> None:
+    """Test OpenPNM crosscheck compatibility with the legacy ``set_BC`` API."""
+
     class FakePhase(dict):
+        """Minimal fake OpenPNM phase container."""
+
         def __init__(self, network):
+            """Store the owning network for later inspection."""
+
             super().__init__()
             self.network = network
 
     class FakeStokesFlow:
+        """Minimal fake OpenPNM StokesFlow algorithm using the ``set_BC`` API."""
+
         def __init__(self, network, phase):
+            """Initialize fake state, synthetic pressures, and BC call storage."""
+
             self.network = network
             self.phase = phase
             self.soln = {"pore.pressure": np.array([1.0, 0.5, 0.0])}
             self.bc_calls = []
 
         def set_BC(self, *, pores, bctype, bcvalues):
+            """Record legacy boundary-condition calls."""
+
             self.bc_calls.append((tuple(pores.tolist()), bctype, float(bcvalues)))
 
         def run(self):
+            """Pretend to run the OpenPNM solver."""
+
             return None
 
         def rate(self, *, pores):
+            """Return a synthetic inlet flow rate."""
+
             assert tuple(pores.tolist()) == (0,)
             return np.array([0.5])
 
@@ -300,21 +362,37 @@ def test_crosscheck_singlephase_with_openpnm_supports_set_bc_compatibility(
 def test_crosscheck_singlephase_with_openpnm_requires_nonzero_pressure_drop(
     monkeypatch, line_network
 ) -> None:
+    """Test zero-pressure-drop rejection in the OpenPNM crosscheck adapter."""
+
     class FakePhase(dict):
+        """Minimal fake OpenPNM phase container."""
+
         def __init__(self, network):
+            """Initialize the fake phase."""
+
             super().__init__()
 
     class FakeStokesFlow:
+        """Minimal fake OpenPNM StokesFlow algorithm using the ``set_value_BC`` API."""
+
         def __init__(self, network, phase):
+            """Initialize fake pressure results."""
+
             self.soln = {"pore.pressure": np.array([1.0, 1.0, 1.0])}
 
         def set_value_BC(self, *, pores, values):
+            """Accept fixed-value boundary conditions without further action."""
+
             return None
 
         def run(self):
+            """Pretend to run the OpenPNM solver."""
+
             return None
 
         def rate(self, *, pores):
+            """Return a synthetic zero flow rate."""
+
             return np.array([0.0])
 
     fake_op = types.SimpleNamespace(

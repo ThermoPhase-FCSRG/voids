@@ -22,10 +22,47 @@ def make_linear_chain_network(
     throat_length: float = 1.0,
     hydraulic_conductance: float = 1.0,
 ) -> Network:
-    """Build a simple linear pore-throat chain used in tutorials and tests.
+    """Build a deterministic one-dimensional pore-throat chain.
 
-    This is a deterministic synthetic network intended for solver demonstrations,
-    cross-checks, and lightweight regression tests.
+    Parameters
+    ----------
+    num_pores :
+        Number of pores in the chain. The number of throats is
+        ``num_pores - 1``.
+    axis :
+        Axis along which the chain is embedded.
+    length :
+        Sample length along the chosen axis.
+    cross_section :
+        Cross-sectional area normal to the flow axis.
+    bulk_volume :
+        Bulk sample volume associated with the toy problem.
+    pore_volume, throat_volume :
+        Synthetic pore and throat void volumes.
+    throat_length :
+        Length assigned to each throat.
+    hydraulic_conductance :
+        Precomputed throat hydraulic conductance.
+
+    Returns
+    -------
+    Network
+        Synthetic line network with canonical inlet and outlet labels.
+
+    Raises
+    ------
+    ValueError
+        If the number of pores, axis, or geometric parameters are invalid.
+
+    Notes
+    -----
+    The pore coordinates are uniformly spaced so that the pore positions satisfy
+
+    ``x_k = k * length / (num_pores - 1)``
+
+    along the selected axis. The function is intended for solver smoke tests,
+    tutorials, and regression examples rather than realistic porous-media
+    reconstruction.
     """
 
     if num_pores < 2:

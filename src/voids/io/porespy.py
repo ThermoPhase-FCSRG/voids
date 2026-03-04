@@ -87,19 +87,61 @@ _PERIMETER_KEYS = frozenset({"pore.perimeter", "throat.perimeter"})
 
 
 def _normalize_value(value: object) -> np.ndarray:
+    """Convert an importer payload to a NumPy array.
+
+    Parameters
+    ----------
+    value :
+        Arbitrary mapping value extracted from a PoreSpy/OpenPNM-style dictionary.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array view or copy produced by :func:`numpy.asarray`.
+    """
+
     return np.asarray(value)
 
 
 def scale_porespy_geometry(
     network_dict: Mapping[str, object], *, voxel_size: float
 ) -> dict[str, object]:
-    """Scale common PoreSpy geometric outputs from voxel units to physical units.
+    """Scale common PoreSpy geometry fields from voxel units to physical units.
+
+    Parameters
+    ----------
+    network_dict :
+        PoreSpy/OpenPNM-style mapping containing keys such as ``pore.coords``,
+        ``throat.cross_sectional_area`` and ``pore.volume``.
+    voxel_size :
+        Edge length of one voxel in physical units.
+
+    Returns
+    -------
+    dict of str to object
+        New mapping with common geometric fields rescaled.
+
+    Raises
+    ------
+    ValueError
+        If ``voxel_size`` is not positive.
 
     Notes
     -----
-    This helper currently assumes an isotropic scalar voxel size. It scales a curated
-    subset of common geometry fields and derives ``throat.volume`` as
-    ``throat.cross_sectional_area * throat.total_length`` when that field is absent.
+    This helper assumes isotropic voxels. The conversion factors are:
+
+    - lengths: ``L_phys = L_vox * voxel_size``
+    - areas: ``A_phys = A_vox * voxel_size**2``
+    - volumes: ``V_phys = V_vox * voxel_size**3``
+    - perimeters: ``P_phys = P_vox * voxel_size``
+
+    When ``throat.volume`` is absent but ``throat.cross_sectional_area`` and
+    ``throat.total_length`` are available, a simple conduit approximation is used:
+
+    ``throat.volume = throat.cross_sectional_area * throat.total_length``
+
+    This is convenient for manufactured examples and notebook workflows, but it is
+    still a geometric approximation rather than an exact segmented volume.
     """
 
     L = float(voxel_size)
@@ -137,7 +179,37 @@ def ensure_cartesian_boundary_labels(
     axes: tuple[str, ...] | None = None,
     tol_fraction: float = 0.05,
 ) -> dict[str, object]:
-    """Infer simple boundary labels from pore coordinates for Cartesian directions."""
+    """Infer Cartesian inlet and outlet pore labels from coordinates.
+
+    Parameters
+    ----------
+    network_dict :
+        Mapping containing at least ``pore.coords``.
+    axes :
+        Axes to label. If omitted, all axes present in the coordinate array are used.
+    tol_fraction :
+        Fraction of the domain span used as a geometric tolerance near each boundary.
+
+    Returns
+    -------
+    dict of str to object
+        Updated mapping with labels such as ``pore.inlet_xmin`` and ``pore.outlet_xmax``.
+
+    Raises
+    ------
+    ValueError
+        If the coordinate array has invalid shape, if ``tol_fraction`` is negative,
+        or if an invalid axis name is requested.
+
+    Notes
+    -----
+    For each active axis, the helper marks pores satisfying
+
+    - ``x <= x_min + tol`` as inlet pores
+    - ``x >= x_max - tol`` as outlet pores
+
+    where ``tol = tol_fraction * max(x_max - x_min, 1e-12)``.
+    """
 
     coords = np.asarray(network_dict["pore.coords"], dtype=float)
     if coords.ndim != 2 or coords.shape[1] not in {2, 3}:
@@ -179,6 +251,23 @@ def ensure_cartesian_boundary_labels(
 def _derive_missing_geometry(
     pore_data: dict[str, np.ndarray], throat_data: dict[str, np.ndarray]
 ) -> None:
+    """Derive secondary geometric fields from more primitive ones.
+
+    Parameters
+    ----------
+    pore_data, throat_data :
+        Mutable pore and throat property dictionaries. They are updated in place.
+
+    Notes
+    -----
+    The helper infers a small set of frequently needed fields:
+
+    - ``area`` from ``diameter_inscribed`` or ``radius_inscribed``
+    - ``diameter_inscribed`` from ``radius_inscribed``
+    - ``shape_factor`` from ``area / perimeter**2``
+    - ``length`` from ``pore1_length + core_length + pore2_length``
+    """
+
     for data in (pore_data, throat_data):
         if "area" not in data:
             if "diameter_inscribed" in data:
@@ -212,6 +301,46 @@ def from_porespy(
     provenance: Provenance | None = None,
     strict: bool = True,
 ) -> Network:
+    """Build a :class:`Network` from a PoreSpy/OpenPNM-style mapping.
+
+    Parameters
+    ----------
+    network_dict :
+        Mapping containing PoreSpy/OpenPNM keys such as ``pore.coords`` and
+        ``throat.conns``.
+    sample :
+        Sample geometry metadata attached to the resulting network. If omitted,
+        a default empty :class:`SampleGeometry` is used.
+    provenance :
+        Provenance metadata. If omitted, a default record with
+        ``source_kind="porespy"`` is created.
+    strict :
+        If ``True``, missing topology keys immediately raise an error.
+
+    Returns
+    -------
+    Network
+        Imported network in the canonical ``voids`` representation.
+
+    Raises
+    ------
+    KeyError
+        If the required topology keys are missing.
+
+    Notes
+    -----
+    The importer performs several normalizations:
+
+    - PoreSpy/OpenPNM aliases are mapped to canonical ``voids`` names.
+    - Two-dimensional coordinates are embedded into 3D as ``(x, y, 0)``.
+    - Basic missing geometry is derived when possible.
+    - Common boundary aliases such as ``left`` and ``right`` are mirrored to
+      ``inlet_xmin`` and ``outlet_xmax``.
+
+    Unsupported nested arrays such as ``throat.hydraulic_size_factors`` are
+    preserved in ``net.extra`` so that information is not silently lost.
+    """
+
     if "throat.conns" not in network_dict or "pore.coords" not in network_dict:
         if strict:
             raise KeyError(
@@ -273,7 +402,6 @@ def from_porespy(
 
     _derive_missing_geometry(pore_data, throat_data)
 
-    # Gentle warning for unsupported nested conduit arrays often present in OpenPNM
     if "hydraulic_size_factors" in throat_data:
         extra["throat.hydraulic_size_factors"] = throat_data.pop("hydraulic_size_factors")
         warnings.warn(

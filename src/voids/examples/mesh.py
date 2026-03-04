@@ -14,6 +14,25 @@ _CIRCULAR_SHAPE_FACTOR = 1.0 / (4.0 * np.pi)
 
 
 def _normalize_shape(shape: Sequence[int]) -> tuple[int, ...]:
+    """Normalize and validate the requested mesh shape.
+
+    Parameters
+    ----------
+    shape :
+        Sequence of grid sizes in each active dimension.
+
+    Returns
+    -------
+    tuple[int, ...]
+        Normalized shape tuple with length 2 or 3.
+
+    Raises
+    ------
+    ValueError
+        If the dimensionality is unsupported or any axis has fewer than two
+        nodes.
+    """
+
     dims = tuple(int(n) for n in shape)
     if len(dims) not in {2, 3}:
         raise ValueError("shape must have length 2 or 3, e.g. (20, 20) or (20, 20, 20)")
@@ -25,6 +44,21 @@ def _normalize_shape(shape: Sequence[int]) -> tuple[int, ...]:
 
 
 def _build_cartesian_connectivity(shape3: tuple[int, int, int], ndim: int) -> np.ndarray:
+    """Build nearest-neighbor connectivity for a Cartesian node lattice.
+
+    Parameters
+    ----------
+    shape3 :
+        Three-dimensional shape, with inactive dimensions set to one.
+    ndim :
+        Number of active dimensions.
+
+    Returns
+    -------
+    numpy.ndarray
+        Integer throat connectivity array with shape ``(Nt, 2)``.
+    """
+
     node_ids = np.arange(np.prod(shape3), dtype=np.int64).reshape(shape3)
     conns: list[np.ndarray] = []
     for axis in range(ndim):
@@ -44,6 +78,22 @@ def _build_cartesian_connectivity(shape3: tuple[int, int, int], ndim: int) -> np
 
 
 def _build_boundary_labels(shape3: tuple[int, int, int], ndim: int) -> dict[str, np.ndarray]:
+    """Construct pore-label masks for Cartesian boundary planes.
+
+    Parameters
+    ----------
+    shape3 :
+        Three-dimensional shape, with inactive dimensions set to one.
+    ndim :
+        Number of active dimensions.
+
+    Returns
+    -------
+    dict[str, numpy.ndarray]
+        Dictionary of boolean pore masks including inlet, outlet, and boundary
+        labels.
+    """
+
     node_ids = np.arange(np.prod(shape3), dtype=np.int64).reshape(shape3)
     labels: dict[str, np.ndarray] = {"all": np.ones(node_ids.size, dtype=bool)}
     boundary = np.zeros(node_ids.size, dtype=bool)
@@ -70,29 +120,47 @@ def make_cartesian_mesh_network(
     thickness: float | None = None,
     units: dict[str, str] | None = None,
 ) -> Network:
-    """Build a synthetic regular mesh network where each mesh node is a pore.
+    """Build a regular mesh-like pore network with one pore per mesh node.
 
     Parameters
     ----------
-    shape
-        Number of pores along each axis. Supports 2D and 3D shapes such as
-        ``(20, 20)`` or ``(20, 20, 20)``.
-    spacing
-        Center-to-center pore spacing along each active axis.
-    pore_radius, throat_radius
-        Geometric parameters for the synthetic pore bodies and throats. They
-        must be smaller than half the pore spacing so neighboring pores remain
-        distinct in the conduit decomposition.
-    thickness
-        Extrusion thickness for 2D meshes. Ignored for 3D meshes.
+    shape :
+        Number of pores along each active axis. Typical examples are ``(20, 20)``
+        and ``(20, 20, 20)``.
+    spacing :
+        Center-to-center pore spacing.
+    pore_radius, throat_radius :
+        Synthetic geometric radii used to construct pore and throat attributes.
+    thickness :
+        Extrusion thickness for 2-D meshes. Ignored for 3-D meshes.
+    units :
+        Optional unit metadata stored in :class:`SampleGeometry`.
+
+    Returns
+    -------
+    Network
+        Synthetic Cartesian lattice network with geometry, labels, and sample
+        metadata.
+
+    Raises
+    ------
+    ValueError
+        If the shape, spacing, or geometric radii are invalid.
 
     Notes
     -----
-    This is a controlled Cartesian lattice for method development and solver
-    validation. It is not intended to represent a geologically realistic pore
-    network. Pore volumes are modeled as cylinders in 2D (extruded through the
-    thickness) and spheres in 3D. Throat volumes use the core throat length so
-    the pore and throat void volumes are not double-counted excessively.
+    Each mesh node becomes one pore, and each nearest-neighbor pair becomes one
+    throat. The resulting graph is a regular square or cubic lattice. For the
+    current synthetic geometry model, the throat core length is
+
+    ``L_core = spacing - 2 * pore_radius``
+
+    and the throat volume is approximated as
+
+    ``V_throat = A_throat * L_core``.
+
+    This makes the example useful for solver verification and scaling studies,
+    while remaining intentionally simpler than an image-derived pore network.
     """
 
     dims = _normalize_shape(shape)

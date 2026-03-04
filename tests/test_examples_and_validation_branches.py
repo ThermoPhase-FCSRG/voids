@@ -17,11 +17,15 @@ from voids.examples.mesh import make_cartesian_mesh_network
 
 
 def test_assert_finite_rejects_nonfinite_values() -> None:
+    """Test rejection of arrays containing non-finite values."""
+
     with pytest.raises(ValueError, match="contains non-finite"):
         assert_finite("pressure", np.array([1.0, np.nan]))
 
 
 def test_validate_network_rejects_parallel_throats_when_disallowed() -> None:
+    """Test strict rejection of parallel throats."""
+
     net = Network(
         throat_conns=np.array([[0, 1], [1, 0]], dtype=int),
         pore_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
@@ -35,6 +39,8 @@ def test_validate_network_rejects_parallel_throats_when_disallowed() -> None:
 
 
 def test_validate_network_warns_for_parallel_throats_and_missing_recommended_fields() -> None:
+    """Test validation warnings for parallel throats and missing recommended fields."""
+
     net = Network(
         throat_conns=np.array([[0, 1], [1, 0]], dtype=int),
         pore_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
@@ -48,6 +54,8 @@ def test_validate_network_warns_for_parallel_throats_and_missing_recommended_fie
 
 
 def test_validate_network_rejects_negative_and_nonpositive_geometry(line_network) -> None:
+    """Test validation of negative pore volumes and nonpositive throat lengths."""
+
     bad_pore = line_network.copy()
     bad_pore.pore["volume"][0] = -1.0
     with pytest.raises(ValueError, match="contains negative values"):
@@ -60,6 +68,8 @@ def test_validate_network_rejects_negative_and_nonpositive_geometry(line_network
 
 
 def test_validate_network_covers_structural_error_branches() -> None:
+    """Test structural validation failures for malformed topology and coordinates."""
+
     sample = SampleGeometry(bulk_volume=1.0)
 
     with pytest.raises(ValueError, match="throat_conns must have shape"):
@@ -100,6 +110,8 @@ def test_validate_network_covers_structural_error_branches() -> None:
 
 
 def test_validate_network_covers_field_and_label_shape_errors(line_network) -> None:
+    """Test validation failures for malformed field and label arrays."""
+
     bad_pore_dim = line_network.copy()
     bad_pore_dim.pore["volume"] = np.array([1.0, 2.0])
     with pytest.raises(ValueError, match="wrong first dimension"):
@@ -132,6 +144,8 @@ def test_validate_network_covers_field_and_label_shape_errors(line_network) -> N
 
 
 def test_validate_network_ignores_nonpositive_sample_bulk_volume_if_sample_raises() -> None:
+    """Test that sample-volume validation is skipped when the sample object raises."""
+
     net = Network(
         throat_conns=np.array([[0, 1]], dtype=int),
         pore_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
@@ -155,11 +169,15 @@ def test_validate_network_ignores_nonpositive_sample_bulk_volume_if_sample_raise
 def test_make_linear_chain_network_rejects_invalid_arguments(
     kwargs: dict[str, float | int | str], message: str
 ) -> None:
+    """Test invalid argument combinations for the linear-chain example generator."""
+
     with pytest.raises(ValueError, match=message):
         make_linear_chain_network(**kwargs)
 
 
 def test_save_default_manufactured_void_image_creates_parent_dirs(tmp_path: Path) -> None:
+    """Test creation of parent directories when saving the default manufactured image."""
+
     target = tmp_path / "nested" / "manufactured.npy"
 
     returned = save_default_manufactured_void_image(target)
@@ -189,5 +207,7 @@ def test_save_default_manufactured_void_image_creates_parent_dirs(tmp_path: Path
 def test_make_cartesian_mesh_network_rejects_invalid_geometry(
     kwargs: dict[str, object], message: str
 ) -> None:
+    """Test invalid geometry inputs for the Cartesian mesh example generator."""
+
     with pytest.raises(ValueError, match=message):
         make_cartesian_mesh_network(**kwargs)

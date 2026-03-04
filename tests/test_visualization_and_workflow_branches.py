@@ -17,6 +17,8 @@ from voids.workflows.run_singlephase import main
 
 
 def test_plotly_validates_scalar_inputs_and_sampling(line_network) -> None:
+    """Test Plotly scalar validation and throat downsampling behavior."""
+
     with pytest.raises(KeyError, match="Missing pore field"):
         plot_network_plotly(line_network, point_scalars="missing")
     with pytest.raises(ValueError, match="pore scalar array must have shape"):
@@ -38,6 +40,8 @@ def test_plotly_validates_scalar_inputs_and_sampling(line_network) -> None:
 
 
 def test_plotly_supports_explicit_cell_scalars(line_network) -> None:
+    """Test explicit throat scalar arrays in the Plotly backend."""
+
     fig = plot_network_plotly(line_network, cell_scalars=np.array([10.0, 20.0]))
 
     hover_text = [trace.text for trace in fig.data[1:]]
@@ -46,6 +50,8 @@ def test_plotly_supports_explicit_cell_scalars(line_network) -> None:
 
 
 def test_plotly_supports_named_scalar_fields(line_network) -> None:
+    """Test named pore and throat scalar fields in the Plotly backend."""
+
     fig = plot_network_plotly(line_network, point_scalars="volume", cell_scalars="length")
 
     assert fig.data[0].marker.colorbar.title.text == "pore.volume"
@@ -53,11 +59,17 @@ def test_plotly_supports_named_scalar_fields(line_network) -> None:
 
 
 def test_rgb_with_opacity_leaves_non_rgb_colors_untouched() -> None:
+    """Test that non-RGB colors are returned unchanged when adding opacity."""
+
     assert _rgb_with_opacity("blue", 0.3) == "blue"
 
 
 class _FakePolyData:
+    """Minimal fake ``pyvista.PolyData`` implementation for unit tests."""
+
     def __init__(self, points, lines=None):
+        """Store points, optional lines, and attached scalar data."""
+
         self.points = np.asarray(points, dtype=float)
         self.lines = np.asarray(lines) if lines is not None else None
         self.point_data: dict[str, np.ndarray] = {}
@@ -65,14 +77,22 @@ class _FakePolyData:
         self.active_scalars: tuple[str, str] | None = None
 
     def set_active_scalars(self, name: str, preference: str = "point") -> None:
+        """Record the active scalar selection."""
+
         self.active_scalars = (name, preference)
 
     def tube(self, **_kwargs):
+        """Raise to exercise tube-rendering fallback logic."""
+
         raise RuntimeError("tube unavailable")
 
 
 class _FakePlotter:
+    """Minimal fake ``pyvista.Plotter`` implementation for unit tests."""
+
     def __init__(self, *, off_screen: bool, notebook: bool):
+        """Store rendering flags and record mesh/screenshot calls."""
+
         self.off_screen = off_screen
         self.notebook = notebook
         self.meshes: list[tuple[object, dict[str, object]]] = []
@@ -81,24 +101,36 @@ class _FakePlotter:
         self.screenshots: list[str] = []
 
     def add_mesh(self, mesh, **kwargs):
+        """Record a mesh-addition call."""
+
         self.meshes.append((mesh, kwargs))
 
     def add_axes(self):
+        """Record that orientation axes were requested."""
+
         self.axes_added = True
 
     def show(self, auto_close: bool = False):
+        """Record a render/show call."""
+
         self.show_calls.append(auto_close)
 
     def screenshot(self, path: str):
+        """Record a screenshot output path."""
+
         self.screenshots.append(path)
 
 
 class _FakePV:
+    """Namespace-style fake PyVista module for unit tests."""
+
     PolyData = _FakePolyData
     Plotter = _FakePlotter
 
 
 def test_line_cells_from_conns_requires_two_column_connectivity() -> None:
+    """Test line-cell construction input validation."""
+
     with pytest.raises(ValueError, match="shape \\(Nt, 2\\)"):
         _line_cells_from_conns(np.array([0, 1, 2]))
 
@@ -106,6 +138,8 @@ def test_line_cells_from_conns_requires_two_column_connectivity() -> None:
 def test_network_to_pyvista_polydata_supports_all_numeric_fields_and_validates_scalars(
     monkeypatch, line_network
 ) -> None:
+    """Test PolyData conversion, scalar attachment, and scalar validation."""
+
     monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
 
     poly = network_to_pyvista_polydata(
@@ -137,6 +171,8 @@ def test_network_to_pyvista_polydata_supports_all_numeric_fields_and_validates_s
 def test_plot_network_pyvista_falls_back_from_tubes_and_saves_screenshot(
     monkeypatch, line_network, tmp_path: Path
 ) -> None:
+    """Test PyVista plotting fallback from tubes and screenshot capture."""
+
     monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
 
     screenshot = tmp_path / "mesh.png"
@@ -160,6 +196,8 @@ def test_plot_network_pyvista_falls_back_from_tubes_and_saves_screenshot(
 
 
 def test_run_singlephase_main_regression(capsys, data_regression) -> None:
+    """Test the workflow CLI JSON payload against a stored regression baseline."""
+
     main()
 
     out = json.loads(capsys.readouterr().out)
@@ -167,6 +205,8 @@ def test_run_singlephase_main_regression(capsys, data_regression) -> None:
 
 
 def test_run_singlephase_module_entrypoint(capsys) -> None:
+    """Test execution of the workflow module as a script entry point."""
+
     runpy.run_path(str(Path(main.__code__.co_filename)), run_name="__main__")
 
     out = json.loads(capsys.readouterr().out)

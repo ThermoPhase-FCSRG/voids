@@ -19,6 +19,22 @@ from voids.physics.singlephase import (
 
 @dataclass(slots=True)
 class SinglePhaseCrosscheckSummary:
+    """Summary of a solver-to-reference comparison.
+
+    Attributes
+    ----------
+    reference :
+        Name of the reference implementation or workflow.
+    axis :
+        Flow axis used in the comparison.
+    permeability_abs_diff, permeability_rel_diff :
+        Absolute and relative differences between apparent permeabilities.
+    total_flow_abs_diff, total_flow_rel_diff :
+        Absolute and relative differences between total flow rates.
+    details :
+        Auxiliary metadata useful for debugging and reporting.
+    """
+
     reference: str
     axis: str
     permeability_abs_diff: float
@@ -29,6 +45,19 @@ class SinglePhaseCrosscheckSummary:
 
 
 def _rel_diff(a: float, b: float) -> float:
+    """Compute a symmetric relative difference.
+
+    Parameters
+    ----------
+    a, b :
+        Values to compare.
+
+    Returns
+    -------
+    float
+        Relative difference ``abs(a - b) / max(abs(a), abs(b), 1e-30)``.
+    """
+
     denom = max(abs(a), abs(b), 1e-30)
     return abs(a - b) / denom
 
@@ -43,6 +72,27 @@ def _summary_from_values(
     q_ref: float,
     details: dict[str, Any],
 ) -> SinglePhaseCrosscheckSummary:
+    """Build a crosscheck summary from scalar transport metrics.
+
+    Parameters
+    ----------
+    reference :
+        Name of the reference implementation.
+    axis :
+        Flow axis.
+    k_voids, k_ref :
+        Apparent permeabilities from ``voids`` and the reference.
+    q_voids, q_ref :
+        Total flow rates from ``voids`` and the reference.
+    details :
+        Auxiliary metadata to attach to the summary.
+
+    Returns
+    -------
+    SinglePhaseCrosscheckSummary
+        Comparison summary.
+    """
+
     return SinglePhaseCrosscheckSummary(
         reference=reference,
         axis=axis,
@@ -57,6 +107,23 @@ def _summary_from_values(
 def _summary_from_results(
     reference: str, axis: str, r0: SinglePhaseResult, r1: SinglePhaseResult
 ) -> SinglePhaseCrosscheckSummary:
+    """Build a summary from two single-phase solver results.
+
+    Parameters
+    ----------
+    reference :
+        Name of the reference workflow.
+    axis :
+        Flow axis used for extracting permeability.
+    r0, r1 :
+        Solver results to compare.
+
+    Returns
+    -------
+    SinglePhaseCrosscheckSummary
+        Comparison summary.
+    """
+
     k0 = float((r0.permeability or {}).get(axis, np.nan))
     k1 = float((r1.permeability or {}).get(axis, np.nan))
     q0 = float(r0.total_flow_rate)
@@ -74,11 +141,33 @@ def crosscheck_singlephase_roundtrip_openpnm_dict(
     axis: str,
     options: SinglePhaseOptions | None = None,
 ) -> SinglePhaseCrosscheckSummary:
-    """Cross-check `voids` solver against a dict roundtrip through OpenPNM/PoreSpy keys.
+    """Cross-check ``voids`` after a dict roundtrip through OpenPNM-style keys.
 
-    This validates interoperability and importer/exporter consistency even when
-    OpenPNM is not installed.
+    Parameters
+    ----------
+    net :
+        Network to solve and round-trip.
+    fluid :
+        Fluid properties.
+    bc :
+        Pressure boundary conditions.
+    axis :
+        Flow axis used in the permeability calculation.
+    options :
+        Optional solver configuration.
+
+    Returns
+    -------
+    SinglePhaseCrosscheckSummary
+        Comparison between the original ``voids`` solve and the round-tripped solve.
+
+    Notes
+    -----
+    This path does not require OpenPNM itself. It checks whether exporting to the
+    flat OpenPNM/PoreSpy naming convention and importing back into ``voids`` changes
+    any transport-relevant fields.
     """
+
     options = options or SinglePhaseOptions()
     r0 = solve(net, fluid=fluid, bc=bc, axis=axis, options=options)
     op_dict = to_openpnm_dict(net)
@@ -88,7 +177,26 @@ def crosscheck_singlephase_roundtrip_openpnm_dict(
 
 
 def _openpnm_phase_factory(op, pn):
-    # OpenPNM 3.x: op.phase.Phase; older variants may expose op.phases.GenericPhase
+    """Construct a compatible OpenPNM phase object.
+
+    Parameters
+    ----------
+    op :
+        Imported OpenPNM module.
+    pn :
+        OpenPNM network object.
+
+    Returns
+    -------
+    Any
+        Phase object compatible with the installed OpenPNM version.
+
+    Raises
+    ------
+    RuntimeError
+        If no known phase constructor works.
+    """
+
     for factory in (
         lambda: op.phase.Phase(network=pn),
         lambda: op.phases.GenericPhase(network=pn),
@@ -101,6 +209,24 @@ def _openpnm_phase_factory(op, pn):
 
 
 def _get_openpnm_pressure(sf):
+    """Extract pore pressure from an OpenPNM StokesFlow result.
+
+    Parameters
+    ----------
+    sf :
+        OpenPNM StokesFlow algorithm object.
+
+    Returns
+    -------
+    numpy.ndarray
+        One-dimensional pore-pressure array.
+
+    Raises
+    ------
+    RuntimeError
+        If pressure cannot be retrieved from the current OpenPNM API.
+    """
+
     for getter in (
         lambda: sf["pore.pressure"],
         lambda: sf.soln["pore.pressure"],
@@ -122,13 +248,43 @@ def crosscheck_singlephase_with_openpnm(
     axis: str,
     options: SinglePhaseOptions | None = None,
 ) -> SinglePhaseCrosscheckSummary:
-    """Run `voids` and OpenPNM StokesFlow on the same conductance field and compare Q/K.
+    """Cross-check ``voids`` against OpenPNM StokesFlow.
+
+    Parameters
+    ----------
+    net :
+        Network to simulate.
+    fluid :
+        Fluid properties.
+    bc :
+        Pressure boundary conditions.
+    axis :
+        Flow axis used for apparent permeability.
+    options :
+        Optional solver configuration.
+
+    Returns
+    -------
+    SinglePhaseCrosscheckSummary
+        Comparison between ``voids`` and OpenPNM.
+
+    Raises
+    ------
+    ImportError
+        If OpenPNM is not installed.
+    RuntimeError
+        If the installed OpenPNM API is incompatible with the adapter.
+    ValueError
+        If the imposed pressure drop is zero.
 
     Notes
     -----
-    This adapter injects *voids-computed* ``throat.hydraulic_conductance`` into OpenPNM so the
-    cross-check isolates assembly/BC/solver consistency rather than geometry-model differences.
+    The comparison injects the ``voids``-computed ``throat.hydraulic_conductance``
+    into OpenPNM. That means the crosscheck isolates differences in system assembly,
+    boundary-condition handling, sign conventions, and linear-solver behavior,
+    rather than differences in geometric conductance modeling.
     """
+
     try:
         import openpnm as op
     except Exception as exc:  # pragma: no cover - depends on optional env
@@ -150,7 +306,6 @@ def crosscheck_singlephase_with_openpnm(
     inlet = np.where(inlet_mask)[0]
     outlet = np.where(outlet_mask)[0]
 
-    # BC setter compatibility (OpenPNM versions vary slightly)
     if hasattr(sf, "set_value_BC"):
         sf.set_value_BC(pores=inlet, values=float(bc.pin))
         sf.set_value_BC(pores=outlet, values=float(bc.pout))
@@ -166,7 +321,6 @@ def crosscheck_singlephase_with_openpnm(
     q_rate = np.asarray(sf.rate(pores=inlet), dtype=float)
     q_ref_raw = float(q_rate.sum())
     q_ref = q_ref_raw
-    # Align sign convention if only sign differs (common across APIs) while preserving raw value in details.
     if np.isfinite(q_ref) and np.isfinite(r_voids.total_flow_rate):
         if np.isclose(abs(q_ref), abs(r_voids.total_flow_rate), rtol=1e-8, atol=1e-14):
             q_ref = float(np.copysign(abs(q_ref), r_voids.total_flow_rate))

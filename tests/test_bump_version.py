@@ -6,6 +6,8 @@ from pathlib import Path
 
 
 def _load_bump_version_module():
+    """Load the bump-version script as an importable module for testing."""
+
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "bump_version.py"
     spec = importlib.util.spec_from_file_location("voids_bump_version", script_path)
     if spec is None or spec.loader is None:
@@ -17,6 +19,8 @@ def _load_bump_version_module():
 
 
 def test_replace_toml_section_version_preserves_line_break_after_version() -> None:
+    """Test that TOML version replacement preserves the following line break."""
+
     module = _load_bump_version_module()
     text = (
         "[project]\n"

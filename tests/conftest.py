@@ -15,11 +15,15 @@ from voids.core.sample import SampleGeometry
 
 @pytest.fixture()
 def line_network() -> Network:
+    """Return the canonical three-pore line network used across tests."""
+
     return make_linear_chain_network()
 
 
 @pytest.fixture()
 def branched_network() -> Network:
+    """Return a small branched network with one disconnected pore."""
+
     pore_coords = np.array([[0, 0, 0], [1, 0, 0], [2, 0, 0], [1, 1, 0], [5, 5, 0]], dtype=float)
     throat_conns = np.array([[0, 1], [1, 2], [1, 3]], dtype=int)
     pore = {"volume": np.ones(5)}

@@ -6,18 +6,30 @@ import numpy as np
 
 
 def make_manufactured_void_image(shape: tuple[int, int, int] = (48, 48, 48)) -> np.ndarray:
-    """Create a deterministic synthetic porous image for PoreSpy extraction examples.
+    """Create a deterministic synthetic 3-D void-space image.
 
-    Returns a boolean 3D image where ``True`` denotes void space. The geometry consists of a
-    chain of overlapping spherical voids spanning the x-direction plus a few side branches.
-    This is *manufactured* (synthetic) but intended to be realistic enough for a PoreSpy
-    ``snow2`` extraction demo.
+    Parameters
+    ----------
+    shape :
+        Output image shape in voxels.
+
+    Returns
+    -------
+    numpy.ndarray
+        Boolean array with shape ``shape`` where ``True`` denotes void space.
+
+    Notes
+    -----
+    The construction is intentionally simple: a chain of overlapping spheres
+    spans the x-direction, while a few side branches create off-axis
+    connectivity. The result is not intended as a geological model. It is a
+    manufactured test image for extraction workflows such as ``porespy.snow2``.
     """
+
     nx, ny, nz = shape
     X, Y, Z = np.indices(shape)
     im = np.zeros(shape, dtype=bool)
 
-    # Main spanning chain (centers and radii in voxel units)
     chain = [
         (6, ny // 2, nz // 2, 7),
         (14, ny // 2 + 1, nz // 2, 7),
@@ -34,7 +46,6 @@ def make_manufactured_void_image(shape: tuple[int, int, int] = (48, 48, 48)) -> 
         mask = (X - cx) ** 2 + (Y - cy) ** 2 + (Z - cz) ** 2 <= r**2
         im |= mask
 
-    # Add a thin connecting tunnel to reduce segmentation ambiguity between two chain pores
     y0 = ny // 2
     z0 = nz // 2
     im[12:17, y0 - 1 : y0 + 2, z0 - 1 : z0 + 2] = True
@@ -43,6 +54,19 @@ def make_manufactured_void_image(shape: tuple[int, int, int] = (48, 48, 48)) -> 
 
 
 def save_default_manufactured_void_image(path: str | Path) -> Path:
+    """Write the manufactured void image to a NumPy ``.npy`` file.
+
+    Parameters
+    ----------
+    path :
+        Destination file path.
+
+    Returns
+    -------
+    pathlib.Path
+        Resolved path that was written.
+    """
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, make_manufactured_void_image())

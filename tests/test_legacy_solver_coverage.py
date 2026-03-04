@@ -31,6 +31,8 @@ from voids.physics.singlephase import (
 
 
 def test_hydraulic_geometry_fallbacks_and_errors(line_network: Network) -> None:
+    """Test geometric fallbacks and missing-data errors in hydraulic helpers."""
+
     net = line_network.copy()
     net.throat.clear()
     net.pore.clear()
@@ -67,11 +69,15 @@ def test_hydraulic_geometry_fallbacks_and_errors(line_network: Network) -> None:
 def test_segment_conductance_input_validation(
     area: np.ndarray, shape_factor: np.ndarray, length: np.ndarray, viscosity: float, message: str
 ) -> None:
+    """Test input validation for area-shape-length conductance calculation."""
+
     with pytest.raises(ValueError, match=message):
         _segment_conductance_from_agl(area, shape_factor, length, viscosity)
 
 
 def test_generic_poiseuille_validation_and_area_fallback(line_network: Network) -> None:
+    """Test validation and area-based fallback paths in Poiseuille conductance."""
+
     with pytest.raises(ValueError, match="viscosity must be positive"):
         generic_poiseuille_conductance(line_network, viscosity=0.0)
 
@@ -103,6 +109,8 @@ def test_generic_poiseuille_validation_and_area_fallback(line_network: Network) 
 
 
 def test_valvatne_shape_factor_branches_and_model_selection(line_network: Network) -> None:
+    """Test shape-factor conductance branches and model-dispatch behavior."""
+
     with pytest.raises(ValueError, match="viscosity must be positive"):
         valvatne_blunt_baseline_conductance(line_network, viscosity=0.0)
 
@@ -130,6 +138,8 @@ def test_valvatne_shape_factor_branches_and_model_selection(line_network: Networ
 def test_spanning_component_ids_validates_axis_and_autocomputes_labels(
     branched_network: Network,
 ) -> None:
+    """Test spanning-component identification and axis validation."""
+
     ids = spanning_component_ids(branched_network, axis="x")
     assert np.array_equal(ids, np.array([0]))
 
@@ -140,6 +150,8 @@ def test_spanning_component_ids_validates_axis_and_autocomputes_labels(
 def test_hdf5_helpers_cover_defaults_bytes_and_throat_labels(
     tmp_path: Path, line_network: Network
 ) -> None:
+    """Test HDF5 helper handling of defaults, raw bytes, and throat labels."""
+
     with h5py.File(tmp_path / "attrs.h5", "w") as handle:
         grp = handle.create_group("meta")
         assert _read_json_attr(grp, "missing", {"fallback": True}) == {"fallback": True}
@@ -156,14 +168,22 @@ def test_hdf5_helpers_cover_defaults_bytes_and_throat_labels(
 
 
 def test_hdf5_read_json_attr_decodes_raw_bytes() -> None:
+    """Test raw-byte JSON attribute decoding without an actual HDF5 file."""
+
     class FakeGroup:
+        """Minimal fake HDF5 group exposing an ``attrs`` mapping."""
+
         def __init__(self):
+            """Initialize a single raw-byte JSON attribute."""
+
             self.attrs = {"payload": json.dumps({"value": 7}).encode("utf-8")}
 
     assert _read_json_attr(FakeGroup(), "payload") == {"value": 7}
 
 
 def test_assemble_pressure_system_input_validation(line_network: Network) -> None:
+    """Test input validation in pressure-system assembly."""
+
     with pytest.raises(ValueError, match="shape \\(Nt,\\)"):
         assemble_pressure_system(line_network, np.ones(line_network.Nt + 1))
     with pytest.raises(ValueError, match="must be nonnegative"):
@@ -171,6 +191,8 @@ def test_assemble_pressure_system_input_validation(line_network: Network) -> Non
 
 
 def test_apply_dirichlet_rowcol_shape_validation_and_noop() -> None:
+    """Test Dirichlet elimination shape checks and the no-op path."""
+
     A = sparse.csr_matrix(np.eye(2))
     b = np.array([1.0, 2.0])
 
@@ -187,6 +209,8 @@ def test_apply_dirichlet_rowcol_shape_validation_and_noop() -> None:
 def test_petrophysics_error_and_wrapper_paths(
     branched_network: Network, line_network: Network
 ) -> None:
+    """Test petrophysics error paths and connectivity-summary wrapper behavior."""
+
     missing = line_network.copy()
     missing.throat.pop("volume")
     with pytest.raises(KeyError, match="Both pore.volume and throat.volume are required"):
@@ -200,6 +224,8 @@ def test_petrophysics_error_and_wrapper_paths(
 
 
 def test_singlephase_dirichlet_vector_and_solver_branches(line_network: Network) -> None:
+    """Test boundary-condition validation and solver edge branches."""
+
     with pytest.raises(KeyError, match="Missing pore label 'missing_inlet'"):
         _make_dirichlet_vector(line_network, PressureBC("missing_inlet", "outlet_xmax", 1.0, 0.0))
     with pytest.raises(KeyError, match="Missing pore label 'missing_outlet'"):
