@@ -170,16 +170,51 @@ def induced_subnetwork(
     local[pore_indices] = np.arange(pore_indices.size)
     throat_mask = pore_mask[net.throat_conns[:, 0]] & pore_mask[net.throat_conns[:, 1]]
     throat_conns = local[net.throat_conns[throat_mask]]
+
+    # Build pore/throat data and label dicts, subsetting only arrays whose first
+    # dimension matches the number of pores/throats in the original network.
+    pore_data: dict[str, object] = {}
+    for k, v in net.pore.items():
+        arr = np.asarray(v)
+        if arr.shape and arr.shape[0] == net.Np:
+            pore_data[k] = arr[pore_indices]
+        else:
+            pore_data[k] = v
+
+    throat_data: dict[str, object] = {}
+    for k, v in net.throat.items():
+        arr = np.asarray(v)
+        if arr.shape and arr.shape[0] == net.Nt:
+            throat_data[k] = arr[throat_mask]
+        else:
+            throat_data[k] = v
+
+    pore_labels: dict[str, object] = {}
+    for k, v in net.pore_labels.items():
+        arr = np.asarray(v)
+        if arr.shape and arr.shape[0] == net.Np:
+            pore_labels[k] = arr[pore_indices]
+        else:
+            pore_labels[k] = v
+
+    throat_labels: dict[str, object] = {}
+    for k, v in net.throat_labels.items():
+        arr = np.asarray(v)
+        if arr.shape and arr.shape[0] == net.Nt:
+            throat_labels[k] = arr[throat_mask]
+        else:
+            throat_labels[k] = v
+
     subnet = Network(
         throat_conns=throat_conns,
         pore_coords=net.pore_coords[pore_indices],
         sample=net.sample,
         provenance=net.provenance,
         schema_version=net.schema_version,
-        pore={k: np.asarray(v)[pore_indices] for k, v in net.pore.items()},
-        throat={k: np.asarray(v)[throat_mask] for k, v in net.throat.items()},
-        pore_labels={k: np.asarray(v)[pore_indices] for k, v in net.pore_labels.items()},
-        throat_labels={k: np.asarray(v)[throat_mask] for k, v in net.throat_labels.items()},
+        pore=pore_data,
+        throat=throat_data,
+        pore_labels=pore_labels,
+        throat_labels=throat_labels,
         extra={**net.extra},
     )
     return subnet, pore_indices, throat_mask
