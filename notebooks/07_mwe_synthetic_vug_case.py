@@ -12,6 +12,11 @@
 #
 # The notebook remains responsible for the scientific interpretation, diagnostics, solve, and visualization.
 #
+# Dataset attribution for `synthetic_vugs.tif`:
+# Chang, B., Turhan, C., Giakoumi, M., Prodanovic, M. (2026, January 28).
+# Companion Data for Digital Porous Media Tutorials [Dataset]. Digital Porous Media Portal.
+# https://doi.org/10.17612/2k9b-1h71
+#
 
 # %%
 import matplotlib.pyplot as plt
