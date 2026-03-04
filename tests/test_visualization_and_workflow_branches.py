@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from voids.visualization._sizing import resolve_size_values, scale_sizes_to_pixels
 from voids.visualization.plotly import _rgb_with_opacity, plot_network_plotly
 from voids.visualization.pyvista import (
     _line_cells_from_conns,
@@ -247,6 +248,58 @@ def test_plotly_explicit_constant_sizes_override_auto_size_fields(line_network) 
     assert fig.data[0].marker.size == pytest.approx(10.0)
     assert fig.data[1].line.width == pytest.approx(4.0)
     assert fig.data[2].line.width == pytest.approx(4.0)
+
+
+def test_size_resolution_helpers_cover_auto_named_and_explicit_modes(monkeypatch) -> None:
+    """Test size helper branches used by Plotly and PyVista visualizations."""
+
+    store = {
+        "radius_inscribed": np.array([1.0, 2.0, 3.0]),
+        "area": np.array([np.pi, 4.0 * np.pi, 9.0 * np.pi]),
+    }
+
+    assert resolve_size_values(False, store=store, expected_shape=(3,), prefix="pore") == (
+        None,
+        None,
+    )
+    assert resolve_size_values(None, store={}, expected_shape=(3,), prefix="pore") == (None, None)
+
+    named_values, named_label = resolve_size_values(
+        "radius_inscribed", store=store, expected_shape=(3,), prefix="pore"
+    )
+    assert named_label == "pore.radius_inscribed"
+    assert np.array_equal(named_values, np.array([2.0, 4.0, 6.0]))
+
+    explicit_values, explicit_label = resolve_size_values(
+        np.array([3.0, 4.0, 5.0]), store=store, expected_shape=(3,), prefix="throat"
+    )
+    assert explicit_label == "throat.size"
+    assert np.array_equal(explicit_values, np.array([3.0, 4.0, 5.0]))
+
+    with pytest.raises(KeyError, match="Missing pore field 'diameter_equivalent'"):
+        resolve_size_values("diameter_equivalent", store=store, expected_shape=(3,), prefix="pore")
+    with pytest.raises(ValueError, match="pore size field 'area' must have shape"):
+        resolve_size_values("area", store={"area": np.ones(2)}, expected_shape=(3,), prefix="pore")
+    with pytest.raises(ValueError, match="throat size array must have shape"):
+        resolve_size_values(np.ones(2), store=store, expected_shape=(3,), prefix="throat")
+
+    no_valid = scale_sizes_to_pixels(np.array([0.0, -1.0, np.nan]), reference=5.0)
+    assert np.array_equal(no_valid, np.full(3, 5.0))
+
+    monkeypatch.setattr("voids.visualization._sizing.np.median", lambda arr: np.nan)
+    baseline_invalid = scale_sizes_to_pixels(np.array([1.0, 2.0, 3.0]), reference=5.0)
+    assert np.array_equal(baseline_invalid, np.full(3, 5.0))
+
+
+def test_plotly_auto_sized_markers_keep_diameter_mode_without_point_scalars(line_network) -> None:
+    """Test Plotly diameter-mode markers for size-based rendering without pore scalars."""
+
+    line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 4.0])
+
+    fig = plot_network_plotly(line_network)
+
+    assert fig.data[0].marker.sizemode == "diameter"
+    assert np.allclose(np.asarray(fig.data[0].marker.size, dtype=float), np.array([3.0, 6.0, 12.0]))
 
 
 def test_plot_network_pyvista_auto_sizes_points_and_throats(monkeypatch, line_network) -> None:

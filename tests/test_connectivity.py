@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from voids.graph.connectivity import (
     connected_components,
@@ -61,3 +62,10 @@ def test_spanning_subnetwork_matches_spanning_mask(branched_network):
     assert throat_mask.tolist() == [True, True, True]
     assert sub.Np == 4
     assert sub.Nt == 3
+
+
+def test_induced_subnetwork_validates_pore_mask_shape(branched_network):
+    """Induced subnetworks should reject masks with the wrong pore count."""
+
+    with pytest.raises(ValueError, match="pore_mask must have shape \\(Np,\\)"):
+        induced_subnetwork(branched_network, np.array([True, False]))
