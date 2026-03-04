@@ -215,3 +215,4 @@ __marimo__/
 refs/
 .vscode/
 notebooks/**/*.png
+tmp/
