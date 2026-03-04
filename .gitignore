@@ -214,3 +214,4 @@ __marimo__/
 # Repo specific ignores
 refs/
 .vscode/
+notebooks/**/*.png
