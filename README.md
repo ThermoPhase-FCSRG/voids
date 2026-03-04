@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/logo/Voids%20logo.png" alt="voids logo" width="280">
+  <img src="resources/logo/Voids%20logo.png" alt="voids logo" width="800">
 </p>
 
 # voids
