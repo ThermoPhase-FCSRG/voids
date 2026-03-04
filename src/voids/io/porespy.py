@@ -5,10 +5,10 @@ import warnings
 
 import numpy as np
 
-from ..core.network import Network
-from ..core.provenance import Provenance
-from ..core.sample import SampleGeometry
-from ..core.validation import validate_network
+from voids.core.network import Network
+from voids.core.provenance import Provenance
+from voids.core.sample import SampleGeometry
+from voids.core.validation import validate_network
 
 _PORESPY_KEYMAP = {
     "throat.conns": ("throat", None, "conns"),
@@ -57,10 +57,123 @@ _AXIS_LABEL_ALIASES = [
     ("bottom", "inlet_zmin"),
     ("top", "outlet_zmax"),
 ]
+_AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
+_AREA_KEYS = frozenset(
+    {
+        "pore.area",
+        "pore.cross_sectional_area",
+        "pore.surface_area",
+        "throat.area",
+        "throat.cross_sectional_area",
+    }
+)
+_LENGTH_KEYS = frozenset(
+    {
+        "pore.coords",
+        "pore.geometric_centroid",
+        "pore.global_peak",
+        "pore.local_peak",
+        "pore.equivalent_diameter",
+        "pore.extended_diameter",
+        "pore.inscribed_diameter",
+        "throat.direct_length",
+        "throat.total_length",
+        "throat.equivalent_diameter",
+        "throat.inscribed_diameter",
+    }
+)
+_VOLUME_KEYS = frozenset({"pore.volume", "pore.region_volume", "throat.volume"})
+_PERIMETER_KEYS = frozenset({"pore.perimeter", "throat.perimeter"})
 
 
 def _normalize_value(value: object) -> np.ndarray:
     return np.asarray(value)
+
+
+def scale_porespy_geometry(
+    network_dict: Mapping[str, object], *, voxel_size: float
+) -> dict[str, object]:
+    """Scale common PoreSpy geometric outputs from voxel units to physical units.
+
+    Notes
+    -----
+    This helper currently assumes an isotropic scalar voxel size. It scales a curated
+    subset of common geometry fields and derives ``throat.volume`` as
+    ``throat.cross_sectional_area * throat.total_length`` when that field is absent.
+    """
+
+    L = float(voxel_size)
+    if L <= 0:
+        raise ValueError("voxel_size must be positive")
+
+    scaled = dict(network_dict)
+    for key, value in list(scaled.items()):
+        arr = np.asarray(value)
+        if not np.issubdtype(arr.dtype, np.number):
+            continue
+        if key in _AREA_KEYS:
+            scaled[key] = arr.astype(float) * L**2
+        elif key in _LENGTH_KEYS:
+            scaled[key] = arr.astype(float) * L
+        elif key in _VOLUME_KEYS:
+            scaled[key] = arr.astype(float) * L**3
+        elif key in _PERIMETER_KEYS:
+            scaled[key] = arr.astype(float) * L
+
+    if "throat.volume" not in scaled and all(
+        key in scaled for key in ("throat.cross_sectional_area", "throat.total_length")
+    ):
+        scaled["throat.volume"] = np.asarray(
+            scaled["throat.cross_sectional_area"], dtype=float
+        ) * np.asarray(scaled["throat.total_length"], dtype=float)
+    if "pore.volume" not in scaled and "pore.region_volume" in scaled:
+        scaled["pore.volume"] = np.asarray(scaled["pore.region_volume"], dtype=float)
+    return scaled
+
+
+def ensure_cartesian_boundary_labels(
+    network_dict: Mapping[str, object],
+    *,
+    axes: tuple[str, ...] | None = None,
+    tol_fraction: float = 0.05,
+) -> dict[str, object]:
+    """Infer simple boundary labels from pore coordinates for Cartesian directions."""
+
+    coords = np.asarray(network_dict["pore.coords"], dtype=float)
+    if coords.ndim != 2 or coords.shape[1] not in {2, 3}:
+        raise ValueError("pore.coords must have shape (Np, 2) or (Np, 3)")
+    if tol_fraction < 0:
+        raise ValueError("tol_fraction must be nonnegative")
+
+    ndim = coords.shape[1]
+    active_axes = axes if axes is not None else tuple(("x", "y", "z")[:ndim])
+    updated = dict(network_dict)
+    boundary = np.asarray(
+        updated.get("pore.boundary", np.zeros(coords.shape[0], dtype=bool)), dtype=bool
+    ).copy()
+
+    for axis in active_axes:
+        if axis not in _AXIS_INDEX:
+            raise ValueError("axes entries must be drawn from {'x', 'y', 'z'}")
+        axis_index = _AXIS_INDEX[axis]
+        if axis_index >= ndim:
+            raise ValueError(
+                f"axis '{axis}' is not available in pore.coords with shape {coords.shape}"
+            )
+        values = coords[:, axis_index]
+        lo = float(values.min())
+        hi = float(values.max())
+        tol = tol_fraction * max(hi - lo, 1e-12)
+        inlet_key = f"pore.inlet_{axis}min"
+        outlet_key = f"pore.outlet_{axis}max"
+        updated.setdefault(inlet_key, values <= lo + tol)
+        updated.setdefault(outlet_key, values >= hi - tol)
+        boundary |= np.asarray(updated[inlet_key], dtype=bool) | np.asarray(
+            updated[outlet_key], dtype=bool
+        )
+
+    updated["pore.boundary"] = boundary
+    return updated
 
 
 def _derive_missing_geometry(

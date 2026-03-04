@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import sparse
 
-from ..core.network import Network
+from voids.core.network import Network
 
 
 def incidence_matrix(net: Network) -> sparse.csr_matrix:

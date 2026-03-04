@@ -7,9 +7,9 @@ from typing import Any
 import h5py
 import numpy as np
 
-from ..core.network import Network
-from ..core.provenance import Provenance
-from ..core.sample import SampleGeometry
+from voids.core.network import Network
+from voids.core.provenance import Provenance
+from voids.core.sample import SampleGeometry
 
 
 def _write_json_attr(obj: h5py.Group, name: str, value: Any) -> None:
@@ -67,8 +67,16 @@ def load_hdf5(path: str | Path) -> Network:
         throat_conns = f["network"]["throat"]["conns"][()]
         pore = {k: ds[()] for k, ds in f["network"]["pore"].items() if k != "coords"}
         throat = {k: ds[()] for k, ds in f["network"]["throat"].items() if k != "conns"}
-        pore_labels = {k: ds[()].astype(bool) for k, ds in f["labels"]["pore"].items()} if "labels" in f else {}
-        throat_labels = {k: ds[()].astype(bool) for k, ds in f["labels"]["throat"].items()} if "labels" in f else {}
+        pore_labels = (
+            {k: ds[()].astype(bool) for k, ds in f["labels"]["pore"].items()}
+            if "labels" in f
+            else {}
+        )
+        throat_labels = (
+            {k: ds[()].astype(bool) for k, ds in f["labels"]["throat"].items()}
+            if "labels" in f
+            else {}
+        )
         extra = _read_json_attr(f, "extra", {})
 
     return Network(

@@ -5,12 +5,12 @@ from typing import Any
 
 import numpy as np
 
-from ..core.network import Network
-from ..geom.hydraulic import throat_conductance as _throat_conductance
-from ..linalg.assemble import assemble_pressure_system
-from ..linalg.bc import apply_dirichlet_rowcol
-from ..linalg.diagnostics import residual_norm
-from ..linalg.solve import solve_linear_system
+from voids.core.network import Network
+from voids.geom.hydraulic import throat_conductance as _throat_conductance
+from voids.linalg.assemble import assemble_pressure_system
+from voids.linalg.bc import apply_dirichlet_rowcol
+from voids.linalg.diagnostics import residual_norm
+from voids.linalg.solve import solve_linear_system
 
 
 @dataclass(slots=True)

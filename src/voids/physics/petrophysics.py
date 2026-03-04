@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..core.network import Network
-from ..graph.connectivity import connected_components, spanning_component_mask
-from ..graph.metrics import ConnectivitySummary, connectivity_metrics as _connectivity_metrics
+from voids.core.network import Network
+from voids.graph.connectivity import connected_components, spanning_component_mask
+from voids.graph.metrics import ConnectivitySummary, connectivity_metrics as _connectivity_metrics
 
 
 @dataclass(slots=True)
@@ -55,7 +55,11 @@ def effective_porosity(net: Network, axis: str | None = None, mode: str | None =
             lname = name.lower()
             if lname.startswith("inlet") or lname.startswith("outlet") or lname == "boundary":
                 boundary_ids.extend(np.unique(comp_labels[np.asarray(mask, dtype=bool)]).tolist())
-        pore_mask = np.isin(comp_labels, np.unique(boundary_ids)) if boundary_ids else np.zeros(net.Np, dtype=bool)
+        pore_mask = (
+            np.isin(comp_labels, np.unique(boundary_ids))
+            if boundary_ids
+            else np.zeros(net.Np, dtype=bool)
+        )
     return _void_volume(net, pore_mask=pore_mask) / net.sample.resolved_bulk_volume()
 
 

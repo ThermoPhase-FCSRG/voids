@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import sparse
 
-from ..core.network import Network
+from voids.core.network import Network
 
 
 def assemble_pressure_system(net: Network, throat_conductance: np.ndarray) -> sparse.csr_matrix:

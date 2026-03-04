@@ -5,8 +5,8 @@ from typing import Any
 
 import numpy as np
 
-from .provenance import Provenance
-from .sample import SampleGeometry
+from voids.core.provenance import Provenance
+from voids.core.sample import SampleGeometry
 
 
 @dataclass(slots=True)

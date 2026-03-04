@@ -4,7 +4,7 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.csgraph import connected_components as _cc
 
-from ..core.network import Network
+from voids.core.network import Network
 
 
 def adjacency_matrix(net: Network) -> sparse.csr_matrix:
@@ -45,7 +45,9 @@ def spanning_component_ids(net: Network, axis: str, labels: np.ndarray | None = 
     return np.intersect1d(inlet_ids, outlet_ids)
 
 
-def spanning_component_mask(net: Network, axis: str, labels: np.ndarray | None = None) -> np.ndarray:
+def spanning_component_mask(
+    net: Network, axis: str, labels: np.ndarray | None = None
+) -> np.ndarray:
     if labels is None:
         _, labels = connected_components(net)
     comp_ids = spanning_component_ids(net, axis=axis, labels=labels)

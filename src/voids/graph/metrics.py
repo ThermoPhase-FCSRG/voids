@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..core.network import Network
-from .connectivity import connected_components, spanning_component_ids
+from voids.core.network import Network
+from voids.graph.connectivity import connected_components, spanning_component_ids
 
 
 @dataclass(slots=True)

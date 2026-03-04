@@ -5,7 +5,7 @@ from typing import Final
 
 import numpy as np
 
-from ..core.network import Network
+from voids.core.network import Network
 
 
 DEFAULT_G_REF: Final[float] = 1.0 / (4.0 * np.pi)  # circular duct shape factor A/P^2

@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from .network import Network
+from voids.core.network import Network
 
 
 RECOMMENDED_PORE_FIELDS = ("volume",)
@@ -13,14 +13,14 @@ RECOMMENDED_THROAT_FIELDS = ("volume", "length")
 
 def assert_finite(name: str, arr: np.ndarray) -> None:
     """Validate that an array contains only finite values.
-    
+
     Parameters
     ----------
     name : str
         Descriptive name of the array (for error messages).
     arr : np.ndarray
         Array to validate.
-        
+
     Raises
     ------
     ValueError
@@ -60,7 +60,10 @@ def validate_network(net: Network, *, allow_parallel_throats: bool = True) -> No
         if np.issubdtype(arr.dtype, np.number):
             if np.isnan(arr).any():
                 raise ValueError(f"Pore field '{k}' contains NaNs")
-            if k in {"volume", "area", "diameter_inscribed", "radius_inscribed", "length"} and (arr < 0).any():
+            if (
+                k in {"volume", "area", "diameter_inscribed", "radius_inscribed", "length"}
+                and (arr < 0).any()
+            ):
                 raise ValueError(f"Pore field '{k}' contains negative values")
     for k, arr in net.throat.items():
         if arr.shape[0] != net.Nt:
@@ -68,7 +71,10 @@ def validate_network(net: Network, *, allow_parallel_throats: bool = True) -> No
         if np.issubdtype(arr.dtype, np.number):
             if np.isnan(arr).any():
                 raise ValueError(f"Throat field '{k}' contains NaNs")
-            if k in {"volume", "area", "diameter_inscribed", "radius_inscribed"} and (arr < 0).any():
+            if (
+                k in {"volume", "area", "diameter_inscribed", "radius_inscribed"}
+                and (arr < 0).any()
+            ):
                 raise ValueError(f"Throat field '{k}' contains negative values")
             if k in {"length", "core_length", "pore1_length", "pore2_length"} and (arr <= 0).any():
                 raise ValueError(f"Throat field '{k}' contains nonpositive values")
@@ -94,4 +100,6 @@ def validate_network(net: Network, *, allow_parallel_throats: bool = True) -> No
             warnings.warn(f"Recommended pore field missing: '{name}'", RuntimeWarning, stacklevel=2)
     for name in RECOMMENDED_THROAT_FIELDS:
         if name not in net.throat:
-            warnings.warn(f"Recommended throat field missing: '{name}'", RuntimeWarning, stacklevel=2)
+            warnings.warn(
+                f"Recommended throat field missing: '{name}'", RuntimeWarning, stacklevel=2
+            )
