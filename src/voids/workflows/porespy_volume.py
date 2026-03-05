@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -31,12 +31,15 @@ def _progress_iter(
     try:
         from tqdm.auto import tqdm  # type: ignore[import-untyped]
 
-        return tqdm(
-            iterable,
-            desc=desc,
-            total=total,
-            dynamic_ncols=True,
-            leave=False,
+        return cast(
+            Iterable[_T],
+            tqdm(
+                iterable,
+                desc=desc,
+                total=total,
+                dynamic_ncols=True,
+                leave=False,
+            ),
         )
     except Exception:  # pragma: no cover - optional dependency
         return iterable
