@@ -49,6 +49,7 @@ from voids.visualization import plot_network_plotly
 
 CIRCULAR_SHAPE_FACTOR = 1.0 / (4.0 * np.pi)
 
+
 # %%
 def iter_progress(
     iterable,
@@ -69,6 +70,7 @@ def iter_progress(
         dynamic_ncols=True,
         leave=leave,
     )
+
 
 # %%
 # Study controls
@@ -105,6 +107,7 @@ print("spacing [m]:", SPACING_M, "| thickness [m]:", THICKNESS_M)
 print("flow axis:", FLOW_AXIS)
 print("baseline realizations:", N_BASELINES)
 print("equivalent radius levels:", EQUIV_RADII_SPACING)
+
 
 # %%
 def equivalent_radius_2d(radii_xy: tuple[float, float]) -> float:
@@ -441,6 +444,7 @@ def save_network_png_matplotlib_2d(
     fig.tight_layout()
     fig.savefig(png_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
+
 
 # %% [markdown]
 # ## Build vug templates
