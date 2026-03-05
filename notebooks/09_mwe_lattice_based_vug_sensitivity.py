@@ -96,7 +96,8 @@ EQUIV_RADII_SPACING = [1.4, 1.7, 2.0, 2.3, 2.6]
 ELLIPSOID_ASPECT = 1.8  # major/minor axis ratio for ellipsoids
 
 # Numerics and plotting
-PLOTLY_MAX_THROATS = 2500
+PLOTLY_MAX_THROATS_BASELINE = 2500
+PLOTLY_MAX_THROATS_VUG: int | None = None  # keep all vug connections visible
 PLOTLY_LAYOUT = {"width": 900, "height": 650}
 PLOTLY_SIZE_LIMITS = (None, None)  # preserve full relative size range
 
@@ -396,13 +397,13 @@ def save_network_png_matplotlib(
     pore_pressure: np.ndarray,
     png_path: Path,
     title: str,
-    max_throats: int = 2500,
+    max_throats: int | None = 2500,
 ) -> None:
     """Save a static 3D network PNG via Matplotlib fallback exporter."""
 
     coords = np.asarray(net.pore_coords, dtype=float)
     conns = np.asarray(net.throat_conns, dtype=int)
-    if conns.shape[0] > max_throats:
+    if max_throats is not None and conns.shape[0] > max_throats:
         idx = np.linspace(0, conns.shape[0] - 1, max_throats, dtype=int)
         conns = conns[idx]
 
@@ -628,7 +629,7 @@ for baseline_id in baseline_iter:
         fig = plot_network_plotly(
             net_baseline,
             point_scalars=baseline_res.pore_pressure,
-            max_throats=PLOTLY_MAX_THROATS,
+            max_throats=PLOTLY_MAX_THROATS_BASELINE,
             point_size_limits=PLOTLY_SIZE_LIMITS,
             throat_size_limits=PLOTLY_SIZE_LIMITS,
             title=f"B{baseline_id} baseline | K{FLOW_AXIS}={k0:.3e} m2",
@@ -646,7 +647,7 @@ for baseline_id in baseline_iter:
                 pore_pressure=np.asarray(baseline_res.pore_pressure, dtype=float),
                 png_path=png_path,
                 title=f"{base_case} pressure field",
-                max_throats=PLOTLY_MAX_THROATS,
+                max_throats=PLOTLY_MAX_THROATS_BASELINE,
             )
             png_export_summary["matplotlib_fallback"] += 1
     except Exception as exc:
@@ -717,7 +718,7 @@ for baseline_id in baseline_iter:
             fig = plot_network_plotly(
                 net_vug,
                 point_scalars=res.pore_pressure,
-                max_throats=PLOTLY_MAX_THROATS,
+                max_throats=PLOTLY_MAX_THROATS_VUG,
                 point_size_limits=PLOTLY_SIZE_LIMITS,
                 throat_size_limits=PLOTLY_SIZE_LIMITS,
                 title=(
@@ -738,7 +739,7 @@ for baseline_id in baseline_iter:
                     pore_pressure=np.asarray(res.pore_pressure, dtype=float),
                     png_path=png_path,
                     title=case_name,
-                    max_throats=PLOTLY_MAX_THROATS,
+                    max_throats=PLOTLY_MAX_THROATS_VUG,
                 )
                 png_export_summary["matplotlib_fallback"] += 1
         except Exception as exc:
