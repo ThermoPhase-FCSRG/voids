@@ -139,9 +139,11 @@ The repository includes paired notebooks and `py:percent` scripts under `noteboo
   - grayscale synthetic vug volume preprocessing, extraction, solve, and pruning comparison
 - `08_mwe_image_based_vug_shape_sensitivity`
   - controlled baseline vs spherical/ellipsoidal vug study with porosity, `Kabs`, and network statistics
-- `09_mwe_lattice_based_vug_sensitivity`
+- `09_mwe_image_based_vug_sensitivity_2d`
+  - simplified 2D image-based baseline vs circular/elliptical vug study with porosity, `Kabs`, and `K/K0` distributions
+- `10_mwe_lattice_based_vug_sensitivity`
   - lattice-based stochastic baselines with spherical/ellipsoidal vug insertion, `Kabs`/porosity sensitivity, and `K/K0` distributions
-- `10_mwe_lattice_based_vug_sensitivity_2d`
+- `11_mwe_lattice_based_vug_sensitivity_2d`
   - simplified 2D lattice counterpart with circular/elliptical vugs, multi-baseline sensitivity, and `K/K0` frequency distributions
 
 Example data under `examples/data/` includes a deterministic manufactured void image and
