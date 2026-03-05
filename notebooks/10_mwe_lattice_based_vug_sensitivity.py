@@ -49,6 +49,7 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
+from voids.workflows import build_lattice_vug_templates_3d, equivalent_radius_3d
 
 CIRCULAR_SHAPE_FACTOR = 1.0 / (4.0 * np.pi)
 
@@ -115,25 +116,6 @@ print("equivalent radius levels:", EQUIV_RADII_SPACING)
 
 
 # %%
-def equivalent_radius(radii_xyz: tuple[float, float, float]) -> float:
-    """Return equivalent sphere radius for an ellipsoid with radii (rx, ry, rz)."""
-
-    rx, ry, rz = radii_xyz
-    return float((rx * ry * rz) ** (1.0 / 3.0))
-
-
-def normalized_vug_volume_3d(radii_xyz: tuple[float, float, float]) -> float:
-    """Return the radii-product term proportional to ellipsoid volume."""
-
-    rx, ry, rz = radii_xyz
-    return float(rx * ry * rz)
-
-
-def _format_radius_token(value: float) -> str:
-    """Return stable filename-safe radius token."""
-
-    return f"{value:.2f}".replace(".", "p")
-
 def _ellipsoid_mask(
     coords: np.ndarray,
     *,
@@ -281,7 +263,7 @@ def insert_vug_superpore(
         )
 
     rx, ry, rz = (float(radii_xyz[0]), float(radii_xyz[1]), float(radii_xyz[2]))
-    r_eq = equivalent_radius((rx, ry, rz))
+    r_eq = equivalent_radius_3d((rx, ry, rz))
     r_ins = float(min(rx, ry, rz))
 
     vug_idx = subnet.Np
@@ -449,65 +431,11 @@ def save_network_png_matplotlib(
 #
 
 # %%
-vug_templates: list[dict[str, object]] = []
-volume_match_report: list[tuple[int, float, float, float]] = []
-
-aspect_root = ELLIPSOID_ASPECT ** (1.0 / 3.0)
-for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
-    req_m = req_over_spacing * SPACING_M
-    target_volume = float(req_m**3)
-
-    # Sphere
-    s = (req_m, req_m, req_m)
-    sphere_rel_err = abs(normalized_vug_volume_3d(s) - target_volume) / target_volume
-    vug_templates.append(
-        {
-            "case": f"sphere_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "spherical",
-            "orientation": "isotropic",
-            "config_index": i,
-            "radii_xyz_m": s,
-            "r_eq_spacing": req_over_spacing,
-            "target_equivalent_radius_m": req_m,
-            "template_volume_rel_error": sphere_rel_err,
-        }
-    )
-
-    # Flow-stretched ellipsoid: (a, b, b), with a / b = aspect
-    b = req_m / aspect_root
-    a = ELLIPSOID_ASPECT * b
-    flow = (a, b, b)
-    flow_rel_err = abs(normalized_vug_volume_3d(flow) - target_volume) / target_volume
-    vug_templates.append(
-        {
-            "case": f"ellipsoid_flow_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "ellipsoidal",
-            "orientation": "flow_stretched",
-            "config_index": i,
-            "radii_xyz_m": flow,
-            "r_eq_spacing": req_over_spacing,
-            "target_equivalent_radius_m": req_m,
-            "template_volume_rel_error": flow_rel_err,
-        }
-    )
-
-    # Orthogonal-stretched ellipsoid: (b, b, a)
-    orth = (b, b, a)
-    orth_rel_err = abs(normalized_vug_volume_3d(orth) - target_volume) / target_volume
-    vug_templates.append(
-        {
-            "case": f"ellipsoid_orth_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "ellipsoidal",
-            "orientation": "orthogonal_stretched",
-            "config_index": i,
-            "radii_xyz_m": orth,
-            "r_eq_spacing": req_over_spacing,
-            "target_equivalent_radius_m": req_m,
-            "template_volume_rel_error": orth_rel_err,
-        }
-    )
-
-    volume_match_report.append((i, sphere_rel_err, flow_rel_err, orth_rel_err))
+vug_templates, volume_match_report = build_lattice_vug_templates_3d(
+    equiv_radii_spacing=EQUIV_RADII_SPACING,
+    spacing_m=SPACING_M,
+    aspect=ELLIPSOID_ASPECT,
+)
 
 print("Total vug templates:", len(vug_templates))
 print("Per family configs:", len(EQUIV_RADII_SPACING))

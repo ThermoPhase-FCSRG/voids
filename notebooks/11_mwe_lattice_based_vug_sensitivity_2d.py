@@ -46,6 +46,7 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
+from voids.workflows import build_lattice_vug_templates_2d, equivalent_radius_2d
 
 
 CIRCULAR_SHAPE_FACTOR = 1.0 / (4.0 * np.pi)
@@ -109,27 +110,6 @@ print("spacing [m]:", SPACING_M, "| thickness [m]:", THICKNESS_M)
 print("flow axis:", FLOW_AXIS)
 print("baseline realizations:", N_BASELINES)
 print("equivalent radius levels:", EQUIV_RADII_SPACING)
-
-
-# %%
-def equivalent_radius_2d(radii_xy: tuple[float, float]) -> float:
-    """Area-equivalent circular radius for an ellipse with radii (rx, ry)."""
-
-    rx, ry = radii_xy
-    return float(np.sqrt(rx * ry))
-
-
-def normalized_vug_area_2d(radii_xy: tuple[float, float]) -> float:
-    """Return the radii-product term proportional to ellipse area."""
-
-    rx, ry = radii_xy
-    return float(rx * ry)
-
-
-def _format_radius_token(value: float) -> str:
-    """Return stable filename-safe token for radius values."""
-
-    return f"{value:.2f}".replace(".", "p")
 
 
 def sample_depth(net: Network) -> float:
@@ -470,62 +450,11 @@ def save_network_png_matplotlib_2d(
 #
 
 # %%
-vug_templates: list[dict[str, object]] = []
-area_match_report: list[tuple[int, float, float, float]] = []
-aspect_root = np.sqrt(ELLIPSOID_ASPECT)
-
-for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
-    req_m = req_over_spacing * SPACING_M
-    target_area = float(req_m**2)
-
-    # Circular (2D analogue to spherical)
-    circle = (req_m, req_m)
-    circle_rel_err = abs(normalized_vug_area_2d(circle) - target_area) / target_area
-    vug_templates.append(
-        {
-            "case": f"circle_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "circular",
-            "orientation": "isotropic",
-            "config_index": i,
-            "radii_xy_m": circle,
-            "target_equivalent_radius_m": req_m,
-            "template_area_rel_error": circle_rel_err,
-        }
-    )
-
-    # Flow-stretched ellipse (x-major)
-    b = req_m / aspect_root
-    a = ELLIPSOID_ASPECT * b
-    flow = (a, b)
-    flow_rel_err = abs(normalized_vug_area_2d(flow) - target_area) / target_area
-    vug_templates.append(
-        {
-            "case": f"ellipse_flow_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "elliptical",
-            "orientation": "flow_stretched",
-            "config_index": i,
-            "radii_xy_m": flow,
-            "target_equivalent_radius_m": req_m,
-            "template_area_rel_error": flow_rel_err,
-        }
-    )
-
-    # Orthogonal-stretched ellipse (y-major)
-    orth = (b, a)
-    orth_rel_err = abs(normalized_vug_area_2d(orth) - target_area) / target_area
-    vug_templates.append(
-        {
-            "case": f"ellipse_orth_cfg{i}_req{_format_radius_token(req_over_spacing)}",
-            "family": "elliptical",
-            "orientation": "orthogonal_stretched",
-            "config_index": i,
-            "radii_xy_m": orth,
-            "target_equivalent_radius_m": req_m,
-            "template_area_rel_error": orth_rel_err,
-        }
-    )
-
-    area_match_report.append((i, circle_rel_err, flow_rel_err, orth_rel_err))
+vug_templates, area_match_report = build_lattice_vug_templates_2d(
+    equiv_radii_spacing=EQUIV_RADII_SPACING,
+    spacing_m=SPACING_M,
+    aspect=ELLIPSOID_ASPECT,
+)
 
 print("total templates:", len(vug_templates))
 print("configs per family:", len(EQUIV_RADII_SPACING))

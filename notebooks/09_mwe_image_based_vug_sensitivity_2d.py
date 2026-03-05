@@ -52,7 +52,12 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
-from voids.workflows import binarize_grayscale_volume, extract_spanning_porespy_network
+from voids.workflows import (
+    binarize_grayscale_volume,
+    build_image_vug_radii_2d,
+    equivalent_radius_2d,
+    extract_spanning_porespy_network,
+)
 
 
 # %%
@@ -127,56 +132,6 @@ PLOTLY_LAYOUT = {"width": 900, "height": 620}
 PLOTLY_SIZE_LIMITS = (None, None)
 USE_TQDM = os.environ.get("VOIDS_DISABLE_TQDM", "0") != "1"
 
-
-def match_ellipse_to_circle(
-    radius_vox: int,
-    *,
-    aspect: float,
-    search_window: int,
-) -> tuple[int, int]:
-    """
-    Return integer `(a, b)` ellipse radii closest to circular area `r^2`.
-
-    The objective prioritizes area matching, then aspect-ratio proximity.
-    """
-
-    r = int(radius_vox)
-    if r <= 0:
-        raise ValueError("radius_vox must be positive")
-    if aspect <= 1.0:
-        raise ValueError("aspect must be > 1.0")
-
-    target = float(r**2)
-    b_real = r / np.sqrt(aspect)
-    a_real = aspect * b_real
-    a0 = int(round(a_real))
-    b0 = int(round(b_real))
-
-    best_key: tuple[float, float, float, float] | None = None
-    best_tuple: tuple[int, int] | None = None
-
-    b_min = max(1, b0 - search_window)
-    b_max = max(b_min, b0 + search_window)
-    for b in range(b_min, b_max + 1):
-        a_target = target / float(b)
-        a_center = int(round(a_target))
-        a_min = max(1, min(a0, a_center) - search_window)
-        a_max = max(a_min, max(a0, a_center) + search_window)
-        for a in range(a_min, a_max + 1):
-            area = float(a * b)
-            area_err = abs(area - target) / target
-            asp = float(a / b)
-            asp_err = abs(asp - aspect) / aspect
-            center_err = abs(a - a_real) + abs(b - b_real)
-            key = (area_err + 0.10 * asp_err, area_err, asp_err, center_err)
-            if best_key is None or key < best_key:
-                best_key = key
-                best_tuple = (int(a), int(b))
-
-    if best_tuple is None:
-        raise RuntimeError("Could not find matched ellipse radii")
-    return best_tuple
-
 # Fast mode for quick smoke checks
 SMOKE_MODE = os.environ.get("VOIDS_VUG_SMOKE", "0") == "1"
 if SMOKE_MODE:
@@ -184,15 +139,15 @@ if SMOKE_MODE:
     CIRCLE_RADII_VOX = CIRCLE_RADII_VOX[:2]
 
 # Build ellipse configs area-matched to each circular config index.
-ELLIPSE_FLOW_RADII_VOX = [
-    match_ellipse_to_circle(
-        r,
-        aspect=ELLIPSE_MATCH_ASPECT,
-        search_window=ELLIPSE_INTEGER_SEARCH_WINDOW,
-    )
-    for r in CIRCLE_RADII_VOX
-]
-ELLIPSE_ORTH_RADII_VOX = [(radii[1], radii[0]) for radii in ELLIPSE_FLOW_RADII_VOX]
+(
+    ELLIPSE_FLOW_RADII_VOX,
+    ELLIPSE_ORTH_RADII_VOX,
+    area_match_report,
+) = build_image_vug_radii_2d(
+    CIRCLE_RADII_VOX,
+    aspect=ELLIPSE_MATCH_ASPECT,
+    search_window=ELLIPSE_INTEGER_SEARCH_WINDOW,
+)
 
 if MATRIX_GENERATOR_MODE == "compare":
     MATRIX_GENERATORS = ["voronoi_edges", "blobs"]
@@ -220,16 +175,15 @@ print("circle configs:", len(CIRCLE_RADII_VOX))
 print("ellipse-flow configs:", len(ELLIPSE_FLOW_RADII_VOX))
 print("ellipse-orth configs:", len(ELLIPSE_ORTH_RADII_VOX))
 
-for i, (r, flow_r, orth_r) in enumerate(
-    zip(CIRCLE_RADII_VOX, ELLIPSE_FLOW_RADII_VOX, ELLIPSE_ORTH_RADII_VOX),
-    start=1,
+for (i, flow_err, orth_err), r, flow_r, orth_r in zip(
+    area_match_report,
+    CIRCLE_RADII_VOX,
+    ELLIPSE_FLOW_RADII_VOX,
+    ELLIPSE_ORTH_RADII_VOX,
 ):
-    circle_area = float(r**2)
-    flow_area = float(flow_r[0] * flow_r[1])
-    orth_area = float(orth_r[0] * orth_r[1])
     print(
-        f"cfg{i}: circle r={r} | flow={flow_r} ({100.0 * (flow_area / circle_area - 1.0):+.2f}% area) | "
-        f"orth={orth_r} ({100.0 * (orth_area / circle_area - 1.0):+.2f}% area)"
+        f"cfg{i}: circle r={r} | flow={flow_r} ({100.0 * flow_err:+.2f}% area) | "
+        f"orth={orth_r} ({100.0 * orth_err:+.2f}% area)"
     )
 
 
@@ -483,13 +437,6 @@ def insert_circular_vug_2d(
     )
 
 
-def equivalent_radius_vox_2d(radii_vox: tuple[int, int]) -> float:
-    """Area-equivalent circular radius for ellipse radii `(rx, ry)`."""
-
-    rx, ry = radii_vox
-    return float(np.sqrt(rx * ry))
-
-
 def make_synthetic_grayscale_2d(binary_void: np.ndarray, seed: int) -> np.ndarray:
     """Create synthetic 2D grayscale image from binary phases."""
 
@@ -638,7 +585,9 @@ def evaluate_case_2d(
         "config_index": config_index,
         "rx_vox": int(radii_vox[0]),
         "ry_vox": int(radii_vox[1]),
-        "equivalent_radius_vox": equivalent_radius_vox_2d(radii_vox),
+        "equivalent_radius_vox": (
+            0.0 if min(radii_vox) <= 0 else equivalent_radius_2d(radii_vox)
+        ),
         "added_void_pixels": added_void_pixels,
         "phi_image": float(segmented.mean()),
         "phi_abs": float(absolute_porosity(net)),
