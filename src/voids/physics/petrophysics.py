@@ -46,17 +46,32 @@ def _void_volume(net: Network, pore_mask: np.ndarray | None = None) -> float:
     Raises
     ------
     KeyError
-        If pore or throat volume data are missing.
+        If the required volume data are missing.
 
     Notes
     -----
-    When a pore mask is supplied, a throat contributes only if both of its end pores
-    are inside the selected subset. This corresponds to summing the volume of the
-    induced subnetwork.
+    When ``pore.region_volume`` is available, it is treated as a disjoint voxel-space
+    partition of the segmented void domain and used directly. In that case throat
+    volumes are ignored because conduit-style ``throat.volume`` estimates can overlap
+    the segmented pore-region volume and substantially overcount the void space.
+
+    Otherwise, when a pore mask is supplied, a throat contributes only if both of its
+    end pores are inside the selected subset. This corresponds to summing the volume
+    of the induced subnetwork.
     """
 
+    if "region_volume" in net.pore:
+        rv = np.asarray(net.pore["region_volume"], dtype=float)
+        if pore_mask is None:
+            pore_mask_local = np.ones(net.Np, dtype=bool)
+        else:
+            pore_mask_local = np.asarray(pore_mask, dtype=bool)
+        return float(rv[pore_mask_local].sum())
+
     if "volume" not in net.pore or "volume" not in net.throat:
-        raise KeyError("Both pore.volume and throat.volume are required for porosity calculations")
+        raise KeyError(
+            "Porosity calculations require pore.region_volume, or both pore.volume and throat.volume"
+        )
     pv = np.asarray(net.pore["volume"], dtype=float)
     tv = np.asarray(net.throat["volume"], dtype=float)
     if pore_mask is None:

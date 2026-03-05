@@ -7,6 +7,7 @@ import numpy as np
 
 from voids.core.network import Network
 from voids.geom.hydraulic import throat_conductance as _throat_conductance
+from voids.graph.connectivity import connected_components, induced_subnetwork
 from voids.linalg.assemble import assemble_pressure_system
 from voids.linalg.bc import apply_dirichlet_rowcol
 from voids.linalg.diagnostics import residual_norm
@@ -212,6 +213,14 @@ def _mass_balance_error(net: Network, q: np.ndarray, fixed_mask: np.ndarray) -> 
     return float(np.linalg.norm(div[free]) / denom)
 
 
+def _active_bc_component_mask(net: Network, fixed_mask: np.ndarray) -> np.ndarray:
+    """Select pores in components touched by at least one Dirichlet pore."""
+
+    _, comp_labels = connected_components(net)
+    active_ids = np.unique(comp_labels[np.asarray(fixed_mask, dtype=bool)])
+    return np.isin(comp_labels, active_ids)
+
+
 def solve(
     net: Network,
     fluid: FluidSinglePhase,
@@ -262,29 +271,48 @@ def solve(
 
     where ``Q`` is total inlet flow rate, ``mu`` is viscosity, ``L`` is the sample
     length along ``axis``, and ``A`` is the corresponding cross-sectional area.
+
+    Connected components that do not touch any Dirichlet pore are excluded from the
+    linear solve because they form floating pressure blocks. Returned pressures and
+    fluxes on those excluded components are reported as ``nan``.
     """
 
     if fluid.viscosity <= 0:
         raise ValueError("Fluid viscosity must be positive")
     options = options or SinglePhaseOptions()
 
-    g = _throat_conductance(net, viscosity=fluid.viscosity, model=options.conductance_model)
-    A = assemble_pressure_system(net, g)
-    b = np.zeros(net.Np, dtype=float)
+    values, fixed_mask = _make_dirichlet_vector(net, bc)
+    active_pores = _active_bc_component_mask(net, fixed_mask)
+    active_net, active_idx, active_throats = induced_subnetwork(net, active_pores)
+    active_values = values[active_idx]
+    active_fixed_mask = fixed_mask[active_idx]
+
+    g_active = _throat_conductance(
+        active_net, viscosity=fluid.viscosity, model=options.conductance_model
+    )
+    A = assemble_pressure_system(active_net, g_active)
+    b = np.zeros(active_net.Np, dtype=float)
     if options.regularization is not None:
         A = A.copy().tocsr()
         A.setdiag(A.diagonal() + float(options.regularization))
 
-    values, fixed_mask = _make_dirichlet_vector(net, bc)
-    A_bc, b_bc = apply_dirichlet_rowcol(A, b, values=values, mask=fixed_mask)
-    p, solver_info = solve_linear_system(A_bc, b_bc, method=options.solver)
+    A_bc, b_bc = apply_dirichlet_rowcol(A, b, values=active_values, mask=active_fixed_mask)
+    p_active, solver_info = solve_linear_system(A_bc, b_bc, method=options.solver)
 
-    i = net.throat_conns[:, 0]
-    j = net.throat_conns[:, 1]
-    q = g * (p[i] - p[j])
+    p = np.full(net.Np, np.nan, dtype=float)
+    p[active_idx] = p_active
 
-    inlet_mask = np.asarray(net.pore_labels[bc.inlet_label], dtype=bool)
-    Q = _inlet_total_flow(net, q, inlet_mask)
+    g = np.full(net.Nt, np.nan, dtype=float)
+    g[active_throats] = g_active
+
+    q = np.full(net.Nt, np.nan, dtype=float)
+    i_active = active_net.throat_conns[:, 0]
+    j_active = active_net.throat_conns[:, 1]
+    q_active = g_active * (p_active[i_active] - p_active[j_active])
+    q[active_throats] = q_active
+
+    inlet_mask = np.asarray(active_net.pore_labels[bc.inlet_label], dtype=bool)
+    Q = _inlet_total_flow(active_net, q_active, inlet_mask)
     dP = float(bc.pin - bc.pout)
     if abs(dP) == 0.0:
         raise ValueError("Pressure drop pin-pout must be nonzero")
@@ -292,8 +320,12 @@ def solve(
     Axs = net.sample.area_for_axis(axis)
     K = abs(Q) * fluid.viscosity * L / (Axs * abs(dP))
 
-    res = residual_norm(A_bc, p, b_bc)
-    mbe = _mass_balance_error(net, q, fixed_mask) if options.check_mass_balance else float("nan")
+    res = residual_norm(A_bc, p_active, b_bc)
+    mbe = (
+        _mass_balance_error(active_net, q_active, active_fixed_mask)
+        if options.check_mass_balance
+        else float("nan")
+    )
 
     return SinglePhaseResult(
         pore_pressure=p,
