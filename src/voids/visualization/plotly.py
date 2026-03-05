@@ -239,6 +239,7 @@ def plot_network_plotly(
     use_variable_throat_sizes = throat_size_values is not None
 
     if use_variable_point_sizes:
+        assert point_size_values is not None
         marker_size: float | np.ndarray = scale_sizes_to_pixels(
             point_size_values,
             reference=point_size_ref,

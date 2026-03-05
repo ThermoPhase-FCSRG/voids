@@ -50,7 +50,7 @@ def _diameter_from_area(area: np.ndarray) -> np.ndarray:
         Diameter defined by ``d = 2 * sqrt(area / pi)``.
     """
 
-    return 2.0 * np.sqrt(area / np.pi)
+    return np.asarray(2.0 * np.sqrt(area / np.pi))
 
 
 def _area_from_diameter(d: np.ndarray) -> np.ndarray:
@@ -87,7 +87,7 @@ def _shape_factor_from_area_perimeter(area: np.ndarray, perimeter: np.ndarray) -
         Shape factor defined by ``G = A / P**2``.
     """
 
-    return area / np.maximum(perimeter, 1e-30) ** 2
+    return np.asarray(area / np.maximum(perimeter, 1e-30) ** 2)
 
 
 def _get_entity_area(net: Network, kind: str) -> np.ndarray:

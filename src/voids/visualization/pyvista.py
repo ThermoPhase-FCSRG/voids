@@ -100,11 +100,11 @@ def network_to_pyvista_polydata(
         If an explicit scalar array has the wrong shape.
     """
 
-    pv = _require_pyvista()
+    _pv = _require_pyvista()
 
     points = np.asarray(net.pore_coords, dtype=float)
     line_cells = _line_cells_from_conns(net.throat_conns)
-    poly = pv.PolyData(points, lines=line_cells)
+    poly: pv.PolyData = _pv.PolyData(points, lines=line_cells)
 
     poly.point_data["pore.id"] = np.arange(net.Np, dtype=np.int64)
     poly.cell_data["throat.id"] = np.arange(net.Nt, dtype=np.int64)
