@@ -1,5 +1,5 @@
 # %% [markdown]
-# # MWE 09 - Lattice-based vug sensitivity with multi-realization baselines
+# # MWE 10 - Lattice-based vug sensitivity with multi-realization baselines
 #
 # This notebook implements the **lattice-based** vug sensitivity idea discussed for the issue:
 #
@@ -94,6 +94,7 @@ THROAT_RADIUS_REL_STD = 0.12
 # Equivalent-vug-radius grid (in lattice-spacing units)
 EQUIV_RADII_SPACING = [1.4, 1.7, 2.0, 2.3, 2.6]
 ELLIPSOID_ASPECT = 1.8  # major/minor axis ratio for ellipsoids
+VUG_VOLUME_MATCH_RTOL = 1.0e-12
 
 # Numerics and plotting
 PLOTLY_MAX_THROATS_BASELINE = 2500
@@ -120,6 +121,13 @@ def equivalent_radius(radii_xyz: tuple[float, float, float]) -> float:
 
     rx, ry, rz = radii_xyz
     return float((rx * ry * rz) ** (1.0 / 3.0))
+
+
+def normalized_vug_volume_3d(radii_xyz: tuple[float, float, float]) -> float:
+    """Return the radii-product term proportional to ellipsoid volume."""
+
+    rx, ry, rz = radii_xyz
+    return float(rx * ry * rz)
 
 
 def _format_radius_token(value: float) -> str:
@@ -448,13 +456,16 @@ def save_network_png_matplotlib(
 
 # %%
 vug_templates: list[dict[str, object]] = []
+volume_match_report: list[tuple[int, float, float, float]] = []
 
 aspect_root = ELLIPSOID_ASPECT ** (1.0 / 3.0)
 for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
     req_m = req_over_spacing * SPACING_M
+    target_volume = float(req_m**3)
 
     # Sphere
     s = (req_m, req_m, req_m)
+    sphere_rel_err = abs(normalized_vug_volume_3d(s) - target_volume) / target_volume
     vug_templates.append(
         {
             "case": f"sphere_cfg{i}_req{_format_radius_token(req_over_spacing)}",
@@ -463,6 +474,8 @@ for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
             "config_index": i,
             "radii_xyz_m": s,
             "r_eq_spacing": req_over_spacing,
+            "target_equivalent_radius_m": req_m,
+            "template_volume_rel_error": sphere_rel_err,
         }
     )
 
@@ -470,6 +483,7 @@ for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
     b = req_m / aspect_root
     a = ELLIPSOID_ASPECT * b
     flow = (a, b, b)
+    flow_rel_err = abs(normalized_vug_volume_3d(flow) - target_volume) / target_volume
     vug_templates.append(
         {
             "case": f"ellipsoid_flow_cfg{i}_req{_format_radius_token(req_over_spacing)}",
@@ -478,11 +492,14 @@ for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
             "config_index": i,
             "radii_xyz_m": flow,
             "r_eq_spacing": req_over_spacing,
+            "target_equivalent_radius_m": req_m,
+            "template_volume_rel_error": flow_rel_err,
         }
     )
 
     # Orthogonal-stretched ellipsoid: (b, b, a)
     orth = (b, b, a)
+    orth_rel_err = abs(normalized_vug_volume_3d(orth) - target_volume) / target_volume
     vug_templates.append(
         {
             "case": f"ellipsoid_orth_cfg{i}_req{_format_radius_token(req_over_spacing)}",
@@ -491,11 +508,23 @@ for i, req_over_spacing in enumerate(EQUIV_RADII_SPACING, start=1):
             "config_index": i,
             "radii_xyz_m": orth,
             "r_eq_spacing": req_over_spacing,
+            "target_equivalent_radius_m": req_m,
+            "template_volume_rel_error": orth_rel_err,
         }
     )
 
+    volume_match_report.append((i, sphere_rel_err, flow_rel_err, orth_rel_err))
+
 print("Total vug templates:", len(vug_templates))
 print("Per family configs:", len(EQUIV_RADII_SPACING))
+print("Volume-match diagnostics (relative error vs target r_eq^3):")
+for cfg_idx, err_s, err_f, err_o in volume_match_report:
+    print(f"  cfg{cfg_idx}: sphere={err_s:.3e}, flow={err_f:.3e}, orth={err_o:.3e}")
+    if max(err_s, err_f, err_o) > VUG_VOLUME_MATCH_RTOL:
+        raise RuntimeError(
+            f"Volume-matching tolerance exceeded at cfg{cfg_idx}: "
+            f"{max(err_s, err_f, err_o):.3e} > {VUG_VOLUME_MATCH_RTOL:.3e}"
+        )
 
 # %% [markdown]
 # ## Generate baseline realizations
@@ -551,7 +580,7 @@ else:
             break
     notebooks_base = (repo_root / "notebooks") if repo_root is not None else cwd
 
-plotly_export_root = notebooks_base / "outputs/09_mwe_lattice_based_vug_sensitivity"
+plotly_export_root = notebooks_base / "outputs/10_mwe_lattice_based_vug_sensitivity"
 plotly_html_dir = plotly_export_root / "plotly_html"
 plotly_png_dir = plotly_export_root / "plotly_png"
 plotly_html_dir.mkdir(parents=True, exist_ok=True)

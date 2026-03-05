@@ -92,23 +92,9 @@ MAX_MATRIX_TRIES = 120
 # >= 5 spherical configurations
 SPHERE_RADII_VOX = [4, 6, 8, 10, 12]
 
-# >= 5 ellipsoids stretched in flow direction (x)
-ELLIPSOID_FLOW_RADII_VOX = [
-    (9, 5, 5),
-    (11, 6, 6),
-    (13, 7, 7),
-    (15, 8, 8),
-    (17, 9, 9),
-]
-
-# >= 5 ellipsoids stretched orthogonal to flow (z)
-ELLIPSOID_ORTH_RADII_VOX = [
-    (5, 5, 9),
-    (6, 6, 11),
-    (7, 7, 13),
-    (8, 8, 15),
-    (9, 9, 17),
-]
+# Ellipsoid shape controls (volume-matched to spherical configs).
+ELLIPSOID_MATCH_ASPECT = 1.8  # major/minor ratio
+ELLIPSOID_INTEGER_SEARCH_WINDOW = 8
 
 GRAYSCALE_VOID_MEAN = 65.0
 GRAYSCALE_SOLID_MEAN = 185.0
@@ -120,13 +106,74 @@ PLOTLY_LAYOUT = {"width": 900, "height": 650}
 PLOTLY_SIZE_LIMITS = (None, None)
 USE_TQDM = os.environ.get("VOIDS_DISABLE_TQDM", "0") != "1"
 
+
+def match_ellipsoid_to_sphere(
+    radius_vox: int,
+    *,
+    aspect: float,
+    search_window: int,
+) -> tuple[int, int, int]:
+    """
+    Return integer `(a, b, b)` ellipsoid radii closest to sphere volume `r^3`.
+
+    The objective prioritizes volume matching, then aspect-ratio proximity.
+    """
+
+    r = int(radius_vox)
+    if r <= 0:
+        raise ValueError("radius_vox must be positive")
+    if aspect <= 1.0:
+        raise ValueError("aspect must be > 1.0")
+
+    target = float(r**3)
+    b_real = r / (aspect ** (1.0 / 3.0))
+    a_real = aspect * b_real
+    a0 = int(round(a_real))
+    b0 = int(round(b_real))
+
+    best_key: tuple[float, float, float, float] | None = None
+    best_tuple: tuple[int, int, int] | None = None
+
+    b_min = max(1, b0 - search_window)
+    b_max = max(b_min, b0 + search_window)
+    for b in range(b_min, b_max + 1):
+        a_target = target / float(b * b)
+        a_center = int(round(a_target))
+        a_min = max(1, min(a0, a_center) - search_window)
+        a_max = max(a_min, max(a0, a_center) + search_window)
+        for a in range(a_min, a_max + 1):
+            vol = float(a * b * b)
+            vol_err = abs(vol - target) / target
+            asp = float(a / b)
+            asp_err = abs(asp - aspect) / aspect
+            center_err = abs(a - a_real) + abs(b - b_real)
+            key = (vol_err + 0.12 * asp_err, vol_err, asp_err, center_err)
+            if best_key is None or key < best_key:
+                best_key = key
+                best_tuple = (int(a), int(b), int(b))
+
+    if best_tuple is None:
+        raise RuntimeError("Could not find matched ellipsoid radii")
+    return best_tuple
+
 # Optional fast mode for development smoke checks only
 SMOKE_MODE = os.environ.get("VOIDS_VUG_SMOKE", "0") == "1"
 if SMOKE_MODE:
     N_BASELINES = 1
     SPHERE_RADII_VOX = SPHERE_RADII_VOX[:1]
-    ELLIPSOID_FLOW_RADII_VOX = ELLIPSOID_FLOW_RADII_VOX[:1]
-    ELLIPSOID_ORTH_RADII_VOX = ELLIPSOID_ORTH_RADII_VOX[:1]
+
+# Build ellipsoid configs matched to each sphere config index.
+ELLIPSOID_FLOW_RADII_VOX = [
+    match_ellipsoid_to_sphere(
+        r,
+        aspect=ELLIPSOID_MATCH_ASPECT,
+        search_window=ELLIPSOID_INTEGER_SEARCH_WINDOW,
+    )
+    for r in SPHERE_RADII_VOX
+]
+ELLIPSOID_ORTH_RADII_VOX = [
+    (radii[1], radii[2], radii[0]) for radii in ELLIPSOID_FLOW_RADII_VOX
+]
 
 print("shape:", SHAPE, "| target matrix porosity:", TARGET_MATRIX_POROSITY)
 print("voxel size:", VOXEL_SIZE_M, "m")
@@ -135,6 +182,18 @@ print("n baselines:", N_BASELINES)
 print("sphere configs:", len(SPHERE_RADII_VOX))
 print("ellipsoid-flow configs:", len(ELLIPSOID_FLOW_RADII_VOX))
 print("ellipsoid-orth configs:", len(ELLIPSOID_ORTH_RADII_VOX))
+
+for i, (r, flow_r, orth_r) in enumerate(
+    zip(SPHERE_RADII_VOX, ELLIPSOID_FLOW_RADII_VOX, ELLIPSOID_ORTH_RADII_VOX),
+    start=1,
+):
+    sphere_vol = float(r**3)
+    flow_vol = float(flow_r[0] * flow_r[1] * flow_r[2])
+    orth_vol = float(orth_r[0] * orth_r[1] * orth_r[2])
+    print(
+        f"cfg{i}: sphere r={r} | flow={flow_r} ({100.0 * (flow_vol / sphere_vol - 1.0):+.2f}% vol) | "
+        f"orth={orth_r} ({100.0 * (orth_vol / sphere_vol - 1.0):+.2f}% vol)"
+    )
 
 
 # %%
