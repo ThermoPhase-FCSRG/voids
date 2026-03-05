@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -376,9 +376,15 @@ def extract_spanning_porespy_network(
     network_dict = scale_porespy_geometry(network_dict, voxel_size=voxel_size)
     network_dict = ensure_cartesian_boundary_labels(network_dict, axes=(selected_axis,))
 
+    shape_2d_or_3d = tuple(int(n) for n in arr.shape)
+    bulk_shape: tuple[int, int, int] = (
+        shape_2d_or_3d[0],
+        shape_2d_or_3d[1],
+        shape_2d_or_3d[2] if arr.ndim == 3 else 1,
+    )
     sample = SampleGeometry(
         voxel_size=float(voxel_size),
-        bulk_shape_voxels=cast("tuple[int, int, int]", tuple(int(n) for n in arr.shape)),
+        bulk_shape_voxels=bulk_shape,
         lengths=axis_lengths,
         cross_sections=axis_areas,
         units={"length": length_unit, "pressure": pressure_unit},
