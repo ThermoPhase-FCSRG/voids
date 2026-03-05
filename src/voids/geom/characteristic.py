@@ -28,7 +28,7 @@ def area_equivalent_diameter(area: np.ndarray) -> np.ndarray:
     """
 
     area = np.asarray(area, dtype=float)
-    return 2.0 * np.sqrt(area / np.pi)
+    return np.asarray(2.0 * np.sqrt(area / np.pi))
 
 
 def normalize_characteristic_size(

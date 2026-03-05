@@ -33,7 +33,7 @@ VOIDS_DATA_PATH = "%PIXI_PROJECT_ROOT%\\examples\\data"
 [tasks]
 lint = "ruff check src tests"
 format-check = "ruff format --check src tests"
-typecheck = "mypy src"
+typecheck = "mypy"
 test = "pytest -q"
 test-cov = "pytest --cov=voids --cov-report=term-missing"
 spec-check = "pytest -q tests/test_schema_network.py"

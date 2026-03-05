@@ -112,7 +112,7 @@ def spanning_component_ids(net: Network, axis: str, labels: np.ndarray | None = 
     outlet_mask = net.pore_labels[outlet_name]
     inlet_ids = np.unique(labels[inlet_mask])
     outlet_ids = np.unique(labels[outlet_mask])
-    return np.intersect1d(inlet_ids, outlet_ids)
+    return np.asarray(np.intersect1d(inlet_ids, outlet_ids))
 
 
 def spanning_component_mask(
@@ -173,7 +173,7 @@ def induced_subnetwork(
 
     # Build pore/throat data and label dicts, subsetting only arrays whose first
     # dimension matches the number of pores/throats in the original network.
-    pore_data: dict[str, object] = {}
+    pore_data: dict[str, np.ndarray] = {}
     for k, v in net.pore.items():
         arr = np.asarray(v)
         if arr.shape and arr.shape[0] == net.Np:
@@ -181,7 +181,7 @@ def induced_subnetwork(
         else:
             pore_data[k] = v
 
-    throat_data: dict[str, object] = {}
+    throat_data: dict[str, np.ndarray] = {}
     for k, v in net.throat.items():
         arr = np.asarray(v)
         if arr.shape and arr.shape[0] == net.Nt:
@@ -189,7 +189,7 @@ def induced_subnetwork(
         else:
             throat_data[k] = v
 
-    pore_labels: dict[str, object] = {}
+    pore_labels: dict[str, np.ndarray] = {}
     for k, v in net.pore_labels.items():
         arr = np.asarray(v)
         if arr.shape and arr.shape[0] == net.Np:
@@ -197,7 +197,7 @@ def induced_subnetwork(
         else:
             pore_labels[k] = v
 
-    throat_labels: dict[str, object] = {}
+    throat_labels: dict[str, np.ndarray] = {}
     for k, v in net.throat_labels.items():
         arr = np.asarray(v)
         if arr.shape and arr.shape[0] == net.Nt:

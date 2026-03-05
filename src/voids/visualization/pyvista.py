@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from voids.core.network import Network
 from voids.visualization._sizing import resolve_size_values
+
+if TYPE_CHECKING:
+    import pyvista as pv
 
 
 def _require_pyvista():
@@ -71,7 +74,7 @@ def network_to_pyvista_polydata(
     point_scalars: str | np.ndarray | None = None,
     cell_scalars: str | np.ndarray | None = None,
     include_all_numeric_fields: bool = False,
-):
+) -> pv.PolyData:
     """Convert a network to ``pyvista.PolyData``.
 
     Parameters
@@ -97,11 +100,11 @@ def network_to_pyvista_polydata(
         If an explicit scalar array has the wrong shape.
     """
 
-    pv = _require_pyvista()
+    _pv = _require_pyvista()
 
     points = np.asarray(net.pore_coords, dtype=float)
     line_cells = _line_cells_from_conns(net.throat_conns)
-    poly = pv.PolyData(points, lines=line_cells)
+    poly: pv.PolyData = _pv.PolyData(points, lines=line_cells)
 
     poly.point_data["pore.id"] = np.arange(net.Np, dtype=np.int64)
     poly.cell_data["throat.id"] = np.arange(net.Nt, dtype=np.int64)
@@ -160,7 +163,7 @@ def plot_network_pyvista(
     show_axes: bool = True,
     notebook: bool | None = None,
     **add_mesh_kwargs: Any,
-):
+) -> tuple[pv.Plotter, pv.PolyData]:
     """Render a pore network with PyVista.
 
     Parameters
