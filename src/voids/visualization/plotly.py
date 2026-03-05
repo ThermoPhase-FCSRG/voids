@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from math import ceil
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from voids.core.network import Network
 from voids.visualization._sizing import resolve_size_values, scale_sizes_to_pixels
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 
 def _require_plotly():
@@ -156,7 +159,7 @@ def plot_network_plotly(
     title: str | None = None,
     show_colorbar: bool = True,
     layout_kwargs: dict[str, Any] | None = None,
-) -> Any:
+) -> go.Figure:
     """Create an interactive Plotly visualization of a pore-throat network.
 
     Parameters

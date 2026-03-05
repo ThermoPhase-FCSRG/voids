@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from voids.core.network import Network
 from voids.io.porespy import from_porespy
+
+if TYPE_CHECKING:
+    import openpnm
 
 
 def to_openpnm_dict(net: Network, *, include_extra: bool = False) -> dict[str, Any]:
@@ -61,7 +64,7 @@ def to_openpnm_network(
     copy_properties: bool = True,
     copy_labels: bool = True,
     include_extra: bool = False,
-) -> Any:
+) -> openpnm.network.Network:
     """Convert a :class:`Network` into an OpenPNM network object.
 
     Parameters

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from voids.core.network import Network
 from voids.visualization._sizing import resolve_size_values
+
+if TYPE_CHECKING:
+    import pyvista as pv
 
 
 def _require_pyvista():
@@ -71,7 +74,7 @@ def network_to_pyvista_polydata(
     point_scalars: str | np.ndarray | None = None,
     cell_scalars: str | np.ndarray | None = None,
     include_all_numeric_fields: bool = False,
-) -> Any:
+) -> pv.PolyData:
     """Convert a network to ``pyvista.PolyData``.
 
     Parameters
@@ -160,7 +163,7 @@ def plot_network_pyvista(
     show_axes: bool = True,
     notebook: bool | None = None,
     **add_mesh_kwargs: Any,
-) -> tuple[Any, Any]:
+) -> tuple[pv.Plotter, pv.PolyData]:
     """Render a pore network with PyVista.
 
     Parameters
