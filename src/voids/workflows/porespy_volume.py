@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -13,19 +14,22 @@ from voids.graph import spanning_subnetwork
 from voids.io import ensure_cartesian_boundary_labels, from_porespy, scale_porespy_geometry
 
 
+_T = TypeVar("_T")
+
+
 def _progress_iter(
-    iterable,
+    iterable: Iterable[_T],
     *,
     show_progress: bool,
     desc: str | None = None,
     total: int | None = None,
-):
+) -> Iterable[_T]:
     """Wrap an iterable with ``tqdm`` when available and requested."""
 
     if not show_progress:
         return iterable
     try:
-        from tqdm.auto import tqdm
+        from tqdm.auto import tqdm  # type: ignore[import-untyped]
 
         return tqdm(
             iterable,
