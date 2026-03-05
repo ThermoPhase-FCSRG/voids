@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from voids.io.porespy import from_porespy
 from voids.core.sample import SampleGeometry
