@@ -155,6 +155,8 @@ def plot_network_plotly(
     line_width: float | None = None,
     line_opacity: float = 0.4,
     size_scale: float = 1.0,
+    point_size_limits: tuple[float | None, float | None] | None = None,
+    throat_size_limits: tuple[float | None, float | None] | None = None,
     max_throats: int | None = 1000,
     title: str | None = None,
     show_colorbar: bool = True,
@@ -187,6 +189,11 @@ def plot_network_plotly(
         Opacity applied to throat lines.
     size_scale :
         Multiplicative factor applied to size-driven pore markers and throat widths.
+    point_size_limits, throat_size_limits :
+        Optional ``(min_px, max_px)`` limits for size-driven rendering in screen-space
+        pixels. When omitted, conservative default clipping is applied for readability.
+        Set to ``(None, None)`` to disable clipping and preserve the full relative
+        dynamic range.
     max_throats :
         Maximum number of throats to draw. Large networks are downsampled for responsiveness.
     title :
@@ -237,6 +244,16 @@ def plot_network_plotly(
     line_width_ref = float(2.0 if line_width is None else line_width)
     use_variable_point_sizes = point_size_values is not None
     use_variable_throat_sizes = throat_size_values is not None
+    if point_size_limits is None:
+        point_min_size = max(2.0, 0.5 * point_size_ref)
+        point_max_size = max(18.0, 4.0 * point_size_ref)
+    else:
+        point_min_size, point_max_size = point_size_limits
+    if throat_size_limits is None:
+        throat_min_size = 0.75
+        throat_max_size = max(10.0, 4.0 * line_width_ref)
+    else:
+        throat_min_size, throat_max_size = throat_size_limits
 
     if use_variable_point_sizes:
         assert point_size_values is not None
@@ -244,8 +261,8 @@ def plot_network_plotly(
             point_size_values,
             reference=point_size_ref,
             scale=size_scale,
-            min_size=max(2.0, 0.5 * point_size_ref),
-            max_size=max(18.0, 4.0 * point_size_ref),
+            min_size=point_min_size,
+            max_size=point_max_size,
         )
     else:
         marker_size = point_size_ref
@@ -256,8 +273,8 @@ def plot_network_plotly(
             throat_size_values[sampled],
             reference=line_width_ref,
             scale=size_scale,
-            min_size=0.75,
-            max_size=max(10.0, 4.0 * line_width_ref),
+            min_size=throat_min_size,
+            max_size=throat_max_size,
         )
     else:
         sampled_line_widths = np.full(sampled.shape, line_width_ref, dtype=float)
