@@ -56,7 +56,7 @@ from voids.workflows import (
     binarize_grayscale_volume,
     build_image_vug_radii_2d,
     equivalent_radius_2d,
-    extract_spanning_porespy_network,
+    extract_spanning_pore_network,
 )
 
 
@@ -526,7 +526,7 @@ def evaluate_case_2d(
     gray = make_synthetic_grayscale_2d(binary_void, seed=case_seed)
     segmented, threshold = binarize_2d_with_voids(gray)
 
-    extract = extract_spanning_porespy_network(
+    extract = extract_spanning_pore_network(
         segmented.astype(int),
         voxel_size=VOXEL_SIZE_M,
         flow_axis=FLOW_AXIS,

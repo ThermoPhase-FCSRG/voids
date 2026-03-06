@@ -80,7 +80,7 @@ print(f"Void structure: {im.shape}, void fraction: {im.mean():.3f}")
 try:
     import porespy as ps
 
-    print("PoreSpy version:", ps.__version__)
+    print("Backend version:", ps.__version__)
 
     # Preferred path: snow2 returns an object with .network in modern PoreSpy examples/docs.
     snow = ps.networks.snow2(phases=im)

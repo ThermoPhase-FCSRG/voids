@@ -56,7 +56,7 @@ from voids.workflows import (
     binarize_grayscale_volume,
     build_image_vug_radii_3d,
     equivalent_radius_3d,
-    extract_spanning_porespy_network,
+    extract_spanning_pore_network,
 )
 
 
@@ -325,7 +325,7 @@ def evaluate_case(
         void_phase="dark",
     )
 
-    extract = extract_spanning_porespy_network(
+    extract = extract_spanning_pore_network(
         segmented.astype(int),
         voxel_size=VOXEL_SIZE_M,
         flow_axis=FLOW_AXIS,

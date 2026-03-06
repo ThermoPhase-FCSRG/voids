@@ -40,7 +40,7 @@ from voids.physics.singlephase import (
 )
 from voids.visualization import plot_network_plotly
 from voids.workflows import (
-    extract_spanning_porespy_network,
+    extract_spanning_pore_network,
     infer_sample_axes,
     preprocess_grayscale_cylindrical_volume,
 )
@@ -144,7 +144,7 @@ plt.tight_layout()
 plt.show()
 
 # %%
-extract = extract_spanning_porespy_network(
+extract = extract_spanning_pore_network(
     im,
     voxel_size=voxel_size,
     flow_axis=flow_axis,
@@ -157,7 +157,7 @@ extract = extract_spanning_porespy_network(
     },
 )
 
-print("PoreSpy version:", extract.porespy_version)
+print("Backend version:", extract.backend_version)
 print("Extracted keys sample:", list(extract.network_dict.keys())[:10])
 
 # %%

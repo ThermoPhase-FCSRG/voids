@@ -37,7 +37,7 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
-from voids.workflows import extract_spanning_porespy_network, infer_sample_axes
+from voids.workflows import extract_spanning_pore_network, infer_sample_axes
 
 examples_data = data_path()
 
@@ -89,7 +89,7 @@ plt.show()
 print(f"Void structure: {im.shape}, void fraction: {im.mean():.3f}")
 
 # %%
-extract = extract_spanning_porespy_network(
+extract = extract_spanning_pore_network(
     im,
     voxel_size=voxel_size,
     flow_axis=flow_axis,
@@ -97,7 +97,7 @@ extract = extract_spanning_porespy_network(
     provenance_notes={"raw_source": img_path.name},
 )
 
-print("PoreSpy version:", extract.porespy_version)
+print("Backend version:", extract.backend_version)
 print("Extracted keys sample:", list(extract.network_dict.keys())[:10])
 
 # %%
