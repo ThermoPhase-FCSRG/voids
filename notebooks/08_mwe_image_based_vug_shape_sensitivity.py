@@ -34,8 +34,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import porespy as ps
-from scipy import ndimage as ndi
 
 try:
     from tqdm.auto import tqdm as _tqdm
@@ -57,6 +55,11 @@ from voids.workflows import (
     build_image_vug_radii_3d,
     equivalent_radius_3d,
     extract_spanning_pore_network,
+    generate_connected_matrix,
+    has_spanning_cluster,
+    insert_ellipsoidal_vug,
+    insert_spherical_vug,
+    make_synthetic_grayscale,
 )
 
 
@@ -148,98 +151,6 @@ for (i, flow_err, orth_err), r, flow_r, orth_r in zip(
     )
 
 
-# %%
-def has_spanning_cluster(void_mask: np.ndarray, axis_index: int) -> bool:
-    """Return True if at least one connected void cluster spans the chosen axis."""
-
-    labels, n_labels = ndi.label(np.asarray(void_mask, dtype=bool))
-    if n_labels == 0:
-        return False
-    inlet_labels = np.unique(np.take(labels, indices=0, axis=axis_index))
-    outlet_labels = np.unique(np.take(labels, indices=-1, axis=axis_index))
-    inlet_labels = inlet_labels[inlet_labels > 0]
-    outlet_labels = outlet_labels[outlet_labels > 0]
-    return np.intersect1d(inlet_labels, outlet_labels).size > 0
-
-
-def generate_connected_matrix(
-    *,
-    shape: tuple[int, int, int],
-    porosity: float,
-    blobiness: float,
-    axis_index: int,
-    seed_start: int,
-    max_tries: int,
-    show_progress: bool = False,
-    progress_desc: str | None = None,
-) -> tuple[np.ndarray, int]:
-    """Generate blobs matrix and retry seeds until it spans the selected axis."""
-
-    seed_iterator = iter_progress(
-        range(max_tries),
-        desc=progress_desc or f"seed search @ {seed_start}",
-        total=max_tries,
-        enabled=show_progress,
-        leave=False,
-    )
-    for i in seed_iterator:
-        seed = seed_start + i
-        matrix = np.asarray(
-            ps.generators.blobs(
-                shape=shape,
-                porosity=porosity,
-                blobiness=blobiness,
-                seed=seed,
-            ),
-            dtype=bool,
-        )
-        if has_spanning_cluster(matrix, axis_index):
-            return matrix, seed
-    raise RuntimeError(
-        f"Could not generate spanning matrix for seed_start={seed_start}"
-    )
-
-
-def insert_ellipsoidal_vug(
-    matrix_void: np.ndarray,
-    *,
-    radii_vox: tuple[int, int, int],
-    center: tuple[int, int, int] | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Insert one axis-aligned ellipsoidal vug in a binary void image."""
-
-    out = np.asarray(matrix_void, dtype=bool).copy()
-    nx, ny, nz = out.shape
-    cx, cy, cz = center if center is not None else (nx // 2, ny // 2, nz // 2)
-    rx, ry, rz = (float(radii_vox[0]), float(radii_vox[1]), float(radii_vox[2]))
-    if min(rx, ry, rz) <= 0:
-        raise ValueError("All ellipsoid radii must be positive")
-
-    x = np.arange(nx, dtype=float) - cx
-    y = np.arange(ny, dtype=float) - cy
-    z = np.arange(nz, dtype=float) - cz
-    xx, yy, zz = np.meshgrid(x, y, z, indexing="ij")
-    ellipsoid_mask = (xx / rx) ** 2 + (yy / ry) ** 2 + (zz / rz) ** 2 <= 1.0
-    out[ellipsoid_mask] = True
-    return out, ellipsoid_mask
-
-
-def insert_spherical_vug(
-    matrix_void: np.ndarray,
-    *,
-    radius_vox: int,
-    center: tuple[int, int, int] | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Insert one spherical vug (special case of ellipsoid)."""
-
-    radius = int(radius_vox)
-    return insert_ellipsoidal_vug(
-        matrix_void,
-        radii_vox=(radius, radius, radius),
-        center=center,
-    )
-
-
 def save_network_png_matplotlib(
     *,
     net,
@@ -291,16 +202,6 @@ def save_network_png_matplotlib(
     plt.close(fig)
 
 
-def make_synthetic_grayscale(binary_void: np.ndarray, seed: int) -> np.ndarray:
-    """Build a synthetic grayscale image from binary void/solid phases."""
-
-    rng = np.random.default_rng(seed)
-    base = np.where(binary_void, GRAYSCALE_VOID_MEAN, GRAYSCALE_SOLID_MEAN)
-    noise = rng.normal(loc=0.0, scale=GRAYSCALE_NOISE_STD, size=binary_void.shape)
-    gray = np.clip(base + noise, 0.0, 255.0)
-    return gray.astype(float)
-
-
 def evaluate_case(
     *,
     baseline_id: int,
@@ -318,7 +219,13 @@ def evaluate_case(
 
     added_void_vox = int(np.count_nonzero(binary_void & ~baseline_void))
 
-    gray = make_synthetic_grayscale(binary_void, seed=case_seed)
+    gray = make_synthetic_grayscale(
+        binary_void,
+        seed=case_seed,
+        void_mean=GRAYSCALE_VOID_MEAN,
+        solid_mean=GRAYSCALE_SOLID_MEAN,
+        noise_std=GRAYSCALE_NOISE_STD,
+    )
     segmented, threshold = binarize_grayscale_volume(
         gray,
         method="otsu",

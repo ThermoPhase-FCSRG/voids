@@ -35,8 +35,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import porespy as ps
-from scipy import ndimage as ndi
 
 try:
     from tqdm.auto import tqdm as _tqdm
@@ -53,10 +51,15 @@ from voids.physics.singlephase import (
 )
 from voids.visualization import plot_network_plotly
 from voids.workflows import (
-    binarize_grayscale_volume,
+    binarize_2d_with_voids,
     build_image_vug_radii_2d,
     equivalent_radius_2d,
     extract_spanning_pore_network,
+    generate_spanning_matrix_2d,
+    has_spanning_cluster_2d,
+    insert_circular_vug_2d,
+    insert_elliptical_vug_2d,
+    make_synthetic_grayscale_2d,
 )
 
 
@@ -187,278 +190,6 @@ for (i, flow_err, orth_err), r, flow_r, orth_r in zip(
     )
 
 
-# %%
-def has_spanning_cluster_2d(void_mask: np.ndarray, axis_index: int) -> bool:
-    """Return True when one connected void cluster spans the chosen axis."""
-
-    labels, n_labels = ndi.label(np.asarray(void_mask, dtype=bool))
-    if n_labels == 0:
-        return False
-    inlet_labels = np.unique(np.take(labels, indices=0, axis=axis_index))
-    outlet_labels = np.unique(np.take(labels, indices=-1, axis=axis_index))
-    inlet_labels = inlet_labels[inlet_labels > 0]
-    outlet_labels = outlet_labels[outlet_labels > 0]
-    return np.intersect1d(inlet_labels, outlet_labels).size > 0
-
-
-def _estimate_ncells_from_target_porosity(
-    shape: tuple[int, int], porosity: float
-) -> int:
-    """
-    Estimate `voronoi_edges(ncells=...)` for a target void porosity in 2D.
-
-    Calibration used here was measured for 180x180 images with r=0 and
-    void = ~voronoi_edges:
-        phi_void ≈ 0.080 + 3.22e-4 * ncells
-    """
-
-    area_ref = float(180 * 180)
-    area = float(shape[0] * shape[1])
-    # Convert target porosity into ncells estimate at reference area.
-    ncells_ref = (float(porosity) - 0.080) / 3.22e-4
-    # Keep approximately constant cell density when shape changes.
-    ncells_scaled = ncells_ref * (area / area_ref)
-    return int(max(40, round(ncells_scaled)))
-
-
-def _generate_connected_matrix_voronoi_2d(
-    *,
-    shape: tuple[int, int],
-    porosity: float,
-    axis_index: int,
-    seed_start: int,
-    max_tries: int,
-    show_progress: bool = False,
-    progress_desc: str | None = None,
-) -> tuple[np.ndarray, int]:
-    """Generate low-porosity spanning 2D matrix from Voronoi edges."""
-
-    if not (0.0 < porosity < 1.0):
-        raise ValueError("porosity must be in (0, 1)")
-
-    best_matrix: np.ndarray | None = None
-    best_seed: int | None = None
-    best_ncells: int | None = None
-    best_error = np.inf
-    ncells_guess = _estimate_ncells_from_target_porosity(shape=shape, porosity=porosity)
-    ncells_candidates = sorted(
-        {
-            max(40, ncells_guess + delta)
-            for delta in range(
-                -VORONOI_SEARCH_HALF_WINDOW,
-                VORONOI_SEARCH_HALF_WINDOW + 1,
-                VORONOI_NCELLS_STEP,
-            )
-        }
-    )
-
-    seed_iter = iter_progress(
-        range(max_tries),
-        desc=progress_desc or f"seed search @ {seed_start}",
-        total=max_tries,
-        enabled=show_progress,
-        leave=False,
-    )
-    for i in seed_iter:
-        seed = int(seed_start + i)
-        for ncells in ncells_candidates:
-            # `voronoi_edges` returns grain cells and thin edges; we use its
-            # complement so pore space is a connected low-porosity edge network.
-            matrix = np.asarray(
-                ps.generators.voronoi_edges(
-                    shape=shape,
-                    ncells=int(ncells),
-                    r=VORONOI_EDGE_RADIUS_VOX,
-                    seed=seed,
-                ),
-                dtype=bool,
-            )
-            void = ~matrix
-            if not has_spanning_cluster_2d(void, axis_index=axis_index):
-                continue
-
-            err = abs(float(void.mean()) - float(porosity))
-            if err < best_error:
-                best_matrix = void
-                best_seed = seed
-                best_ncells = int(ncells)
-                best_error = err
-            if err <= VORONOI_TARGET_TOL:
-                return void, seed
-
-    if best_matrix is not None and best_seed is not None:
-        print(
-            "using closest matrix candidate:",
-            f"seed={best_seed}",
-            f"ncells={best_ncells}",
-            f"porosity={float(best_matrix.mean()):.4f}",
-            f"|target={porosity:.4f}",
-        )
-        return best_matrix, best_seed
-
-    raise RuntimeError(
-        "Could not generate spanning low-porosity 2D matrix "
-        f"for seed_start={seed_start}"
-    )
-
-
-def _generate_connected_matrix_blobs_2d(
-    *,
-    shape: tuple[int, int],
-    porosity: float,
-    blobiness: float,
-    axis_index: int,
-    seed_start: int,
-    max_tries: int,
-    fallback_porosity_levels: list[float],
-    show_progress: bool = False,
-    progress_desc: str | None = None,
-) -> tuple[np.ndarray, int, float]:
-    """
-    Generate a spanning 2D blobs matrix with no artificial channel/fracture.
-
-    If the requested low porosity does not percolate, test progressively higher
-    porosities from `fallback_porosity_levels`.
-    """
-
-    porosity_trials: list[float] = [float(porosity)] + [
-        float(v) for v in fallback_porosity_levels if float(v) > float(porosity)
-    ]
-    porosity_trials = list(dict.fromkeys(porosity_trials))
-    for porosity_try in porosity_trials:
-        seed_iter = iter_progress(
-            range(max_tries),
-            desc=(
-                progress_desc
-                or f"blobs seed search @ {seed_start} (phi={porosity_try:.3f})"
-            ),
-            total=max_tries,
-            enabled=show_progress,
-            leave=False,
-        )
-        for i in seed_iter:
-            seed = int(seed_start + i)
-            matrix = np.asarray(
-                ps.generators.blobs(
-                    shape=shape,
-                    porosity=float(porosity_try),
-                    blobiness=float(blobiness),
-                    seed=seed,
-                ),
-                dtype=bool,
-            )
-            if has_spanning_cluster_2d(matrix, axis_index=axis_index):
-                return matrix, seed, float(porosity_try)
-
-    raise RuntimeError(
-        "Could not generate spanning blobs matrix without channel/fracture for "
-        f"seed_start={seed_start}, target_phi={porosity:.3f}"
-    )
-
-
-def generate_connected_matrix_2d(
-    *,
-    shape: tuple[int, int],
-    porosity: float,
-    axis_index: int,
-    generator_name: str,
-    seed_start: int,
-    max_tries: int,
-    show_progress: bool = False,
-    progress_desc: str | None = None,
-) -> tuple[np.ndarray, int, float]:
-    """Generate a spanning 2D matrix using the selected generator."""
-
-    generator = str(generator_name).strip().lower()
-    if generator == "voronoi_edges":
-        matrix, seed = _generate_connected_matrix_voronoi_2d(
-            shape=shape,
-            porosity=porosity,
-            axis_index=axis_index,
-            seed_start=seed_start,
-            max_tries=max_tries,
-            show_progress=show_progress,
-            progress_desc=progress_desc,
-        )
-        return matrix, seed, float(porosity)
-
-    if generator == "blobs":
-        return _generate_connected_matrix_blobs_2d(
-            shape=shape,
-            porosity=porosity,
-            blobiness=BLOBS_BLOBINESS,
-            axis_index=axis_index,
-            seed_start=seed_start,
-            max_tries=max_tries,
-            fallback_porosity_levels=BLOBS_FALLBACK_POROSITY_LEVELS,
-            show_progress=show_progress,
-            progress_desc=progress_desc,
-        )
-
-    raise ValueError(f"Unsupported generator_name: {generator_name}")
-
-
-def insert_elliptical_vug_2d(
-    matrix_void: np.ndarray,
-    *,
-    radii_vox: tuple[int, int],
-    center: tuple[int, int] | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Insert one axis-aligned elliptical vug into a 2D binary void image."""
-
-    out = np.asarray(matrix_void, dtype=bool).copy()
-    nx, ny = out.shape
-    cx, cy = center if center is not None else (nx // 2, ny // 2)
-    rx, ry = float(radii_vox[0]), float(radii_vox[1])
-    if min(rx, ry) <= 0:
-        raise ValueError("Ellipse radii must be positive")
-
-    x = np.arange(nx, dtype=float) - cx
-    y = np.arange(ny, dtype=float) - cy
-    xx, yy = np.meshgrid(x, y, indexing="ij")
-    mask = (xx / rx) ** 2 + (yy / ry) ** 2 <= 1.0
-    out[mask] = True
-    return out, mask
-
-
-def insert_circular_vug_2d(
-    matrix_void: np.ndarray,
-    *,
-    radius_vox: int,
-    center: tuple[int, int] | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Insert one circular vug (special case of 2D ellipse)."""
-
-    r = int(radius_vox)
-    return insert_elliptical_vug_2d(
-        matrix_void,
-        radii_vox=(r, r),
-        center=center,
-    )
-
-
-def make_synthetic_grayscale_2d(binary_void: np.ndarray, seed: int) -> np.ndarray:
-    """Create synthetic 2D grayscale image from binary phases."""
-
-    rng = np.random.default_rng(seed)
-    base = np.where(binary_void, GRAYSCALE_VOID_MEAN, GRAYSCALE_SOLID_MEAN)
-    noise = rng.normal(loc=0.0, scale=GRAYSCALE_NOISE_STD, size=binary_void.shape)
-    gray = np.clip(base + noise, 0.0, 255.0)
-    return gray.astype(float)
-
-
-def binarize_2d_with_voids(gray2d: np.ndarray) -> tuple[np.ndarray, float]:
-    """Use `voids` thresholding helper (3D API) on a 2D image via singleton axis."""
-
-    gray3d = np.asarray(gray2d, dtype=float)[None, :, :]
-    seg3d, threshold = binarize_grayscale_volume(
-        gray3d,
-        method="otsu",
-        void_phase="dark",
-    )
-    return np.asarray(seg3d[0], dtype=int), float(threshold)
-
-
 def save_network_png_matplotlib_2d(
     *,
     net,
@@ -523,7 +254,13 @@ def evaluate_case_2d(
     """Run segmentation -> extraction -> solve for one 2D case."""
 
     added_void_pixels = int(np.count_nonzero(binary_void & ~baseline_void))
-    gray = make_synthetic_grayscale_2d(binary_void, seed=case_seed)
+    gray = make_synthetic_grayscale_2d(
+        binary_void,
+        seed=case_seed,
+        void_mean=GRAYSCALE_VOID_MEAN,
+        solid_mean=GRAYSCALE_SOLID_MEAN,
+        noise_std=GRAYSCALE_NOISE_STD,
+    )
     segmented, threshold = binarize_2d_with_voids(gray)
 
     extract = extract_spanning_pore_network(
@@ -676,14 +413,19 @@ for generator_name in MATRIX_GENERATORS:
         leave=True,
     ):
         seed_start = BASE_SEED + 1500 * baseline_id
-        base_void, used_seed, used_porosity_target = generate_connected_matrix_2d(
+        base_void, used_seed, used_porosity_target = generate_spanning_matrix_2d(
             shape=SHAPE_2D,
             porosity=TARGET_MATRIX_POROSITY,
             axis_index=FLOW_AXIS_INDEX,
             generator_name=generator_name,
             seed_start=seed_start,
             max_tries=MAX_MATRIX_TRIES,
-            show_progress=False,
+            blobs_blobiness=BLOBS_BLOBINESS,
+            blobs_fallback_porosity_levels=BLOBS_FALLBACK_POROSITY_LEVELS,
+            voronoi_edge_radius_vox=VORONOI_EDGE_RADIUS_VOX,
+            voronoi_target_tol=VORONOI_TARGET_TOL,
+            voronoi_ncells_step=VORONOI_NCELLS_STEP,
+            voronoi_search_half_window=VORONOI_SEARCH_HALF_WINDOW,
         )
         baseline_images[baseline_id] = base_void
         baseline_seeds[baseline_id] = used_seed

@@ -39,7 +39,6 @@ except Exception:  # pragma: no cover - optional notebook dependency
 
 from voids.core.network import Network
 from voids.examples import make_cartesian_mesh_network
-from voids.graph.connectivity import induced_subnetwork
 from voids.graph.metrics import coordination_numbers
 from voids.physics.petrophysics import absolute_porosity, effective_porosity
 from voids.physics.singlephase import (
@@ -49,9 +48,11 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
-from voids.workflows import build_lattice_vug_templates_3d, equivalent_radius_3d
-
-CIRCULAR_SHAPE_FACTOR = 1.0 / (4.0 * np.pi)
+from voids.workflows import (
+    build_lattice_vug_templates_3d,
+    insert_vug_superpore,
+    update_network_geometry_from_radii,
+)
 
 
 # %%
@@ -115,76 +116,6 @@ print("baseline realizations:", N_BASELINES)
 print("equivalent radius levels:", EQUIV_RADII_SPACING)
 
 
-# %%
-def _ellipsoid_mask(
-    coords: np.ndarray,
-    *,
-    center: np.ndarray,
-    radii_xyz: tuple[float, float, float],
-) -> np.ndarray:
-    """Return mask selecting pores inside the axis-aligned ellipsoid."""
-
-    rx, ry, rz = (float(radii_xyz[0]), float(radii_xyz[1]), float(radii_xyz[2]))
-    if min(rx, ry, rz) <= 0:
-        raise ValueError("Ellipsoid radii must be strictly positive")
-    dx = (coords[:, 0] - center[0]) / rx
-    dy = (coords[:, 1] - center[1]) / ry
-    dz = (coords[:, 2] - center[2]) / rz
-    return (dx * dx + dy * dy + dz * dz) <= 1.0
-
-def update_network_geometry_from_radii(
-    net: Network,
-    *,
-    pore_radius: np.ndarray,
-    throat_radius: np.ndarray,
-) -> None:
-    """Update pore/throat geometry fields from per-entity radii arrays."""
-
-    pore_radius = np.asarray(pore_radius, dtype=float)
-    throat_radius = np.asarray(throat_radius, dtype=float)
-    if pore_radius.shape != (net.Np,):
-        raise ValueError(f"pore_radius must have shape ({net.Np},)")
-    if throat_radius.shape != (net.Nt,):
-        raise ValueError(f"throat_radius must have shape ({net.Nt},)")
-
-    pore_area = np.pi * pore_radius**2
-    pore_perimeter = 2.0 * np.pi * pore_radius
-    pore_volume = (4.0 / 3.0) * np.pi * pore_radius**3
-
-    net.pore["radius_inscribed"] = pore_radius
-    net.pore["diameter_inscribed"] = 2.0 * pore_radius
-    net.pore["area"] = pore_area
-    net.pore["perimeter"] = pore_perimeter
-    net.pore["volume"] = pore_volume
-    net.pore["shape_factor"] = np.full(net.Np, CIRCULAR_SHAPE_FACTOR, dtype=float)
-
-    conns = np.asarray(net.throat_conns, dtype=int)
-    c0 = net.pore_coords[conns[:, 0]]
-    c1 = net.pore_coords[conns[:, 1]]
-    direct_length = np.linalg.norm(c1 - c0, axis=1)
-
-    p1_length = np.minimum(pore_radius[conns[:, 0]], 0.45 * direct_length)
-    p2_length = np.minimum(pore_radius[conns[:, 1]], 0.45 * direct_length)
-    core_length = np.maximum(
-        direct_length - p1_length - p2_length, 0.05 * direct_length
-    )
-
-    throat_area = np.pi * throat_radius**2
-    throat_perimeter = 2.0 * np.pi * throat_radius
-    throat_volume = throat_area * core_length
-
-    net.throat["radius_inscribed"] = throat_radius
-    net.throat["diameter_inscribed"] = 2.0 * throat_radius
-    net.throat["area"] = throat_area
-    net.throat["perimeter"] = throat_perimeter
-    net.throat["shape_factor"] = np.full(net.Nt, CIRCULAR_SHAPE_FACTOR, dtype=float)
-    net.throat["length"] = direct_length
-    net.throat["direct_length"] = direct_length
-    net.throat["pore1_length"] = p1_length
-    net.throat["core_length"] = core_length
-    net.throat["pore2_length"] = p2_length
-    net.throat["volume"] = throat_volume
-
 def generate_baseline_network(*, baseline_id: int, seed: int) -> Network:
     """Create one stochastic lattice baseline realization."""
 
@@ -217,163 +148,6 @@ def generate_baseline_network(*, baseline_id: int, seed: int) -> Network:
     net.extra["baseline_id"] = int(baseline_id)
     net.extra["baseline_seed"] = int(seed)
     return net
-
-def insert_vug_superpore(
-    net: Network,
-    *,
-    radii_xyz: tuple[float, float, float],
-    center: np.ndarray | None = None,
-) -> tuple[Network, dict[str, object]]:
-    """Replace an ellipsoidal pore subset by one vug super-pore and reconnect interface."""
-
-    base = net.copy()
-    coords = np.asarray(base.pore_coords, dtype=float)
-    if center is None:
-        center = 0.5 * (coords.min(axis=0) + coords.max(axis=0))
-    center = np.asarray(center, dtype=float)
-
-    inside = _ellipsoid_mask(coords, center=center, radii_xyz=radii_xyz)
-    if not np.any(inside):
-        # Safety fallback for very small radii: force at least one pore replacement.
-        nearest = int(np.argmin(np.linalg.norm(coords - center[None, :], axis=1)))
-        inside[nearest] = True
-
-    conns = np.asarray(base.throat_conns, dtype=int)
-    ci = inside[conns[:, 0]]
-    cj = inside[conns[:, 1]]
-
-    outside_neighbors = np.unique(
-        np.concatenate([conns[ci & (~cj), 1], conns[(~ci) & cj, 0]])
-    )
-    if outside_neighbors.size == 0:
-        raise RuntimeError(
-            "Vug insertion produced zero interface neighbors; try smaller radii"
-        )
-
-    keep_mask = ~inside
-    subnet, kept_old_idx, _ = induced_subnetwork(base, keep_mask)
-
-    old_to_new = -np.ones(base.Np, dtype=int)
-    old_to_new[kept_old_idx] = np.arange(kept_old_idx.size, dtype=int)
-    boundary_new = old_to_new[outside_neighbors]
-    boundary_new = np.unique(boundary_new[boundary_new >= 0])
-    if boundary_new.size == 0:
-        raise RuntimeError(
-            "No boundary pores survived after induced-subnetwork reduction"
-        )
-
-    rx, ry, rz = (float(radii_xyz[0]), float(radii_xyz[1]), float(radii_xyz[2]))
-    r_eq = equivalent_radius_3d((rx, ry, rz))
-    r_ins = float(min(rx, ry, rz))
-
-    vug_idx = subnet.Np
-    new_coords = np.vstack([subnet.pore_coords, center[None, :]])
-    new_conns = np.column_stack(
-        [np.full(boundary_new.size, vug_idx, dtype=int), boundary_new]
-    )
-
-    net_vug = subnet.copy()
-    net_vug.pore_coords = new_coords
-    net_vug.throat_conns = np.vstack([subnet.throat_conns, new_conns])
-
-    # Extend pore fields
-    pore_append = {
-        "radius_inscribed": np.array([r_ins], dtype=float),
-        "diameter_inscribed": np.array([2.0 * r_ins], dtype=float),
-        "area": np.array([np.pi * r_eq**2], dtype=float),
-        "perimeter": np.array([2.0 * np.pi * r_eq], dtype=float),
-        "shape_factor": np.array([CIRCULAR_SHAPE_FACTOR], dtype=float),
-        "volume": np.array([(4.0 / 3.0) * np.pi * rx * ry * rz], dtype=float),
-    }
-    for key in list(net_vug.pore.keys()):
-        arr = np.asarray(net_vug.pore[key])
-        if arr.ndim >= 1 and arr.shape[0] == subnet.Np:
-            ext = pore_append.get(key, np.zeros((1,) + arr.shape[1:], dtype=arr.dtype))
-            net_vug.pore[key] = np.concatenate([arr, ext], axis=0)
-
-    # Build new vug-throat geometry
-    boundary_coords = net_vug.pore_coords[boundary_new]
-    direct_length = np.linalg.norm(boundary_coords - center[None, :], axis=1)
-    direct_length = np.maximum(direct_length, 1.0e-12)
-
-    throat_r_median = float(
-        np.median(subnet.throat.get("radius_inscribed", BASE_THROAT_RADIUS_M))
-    )
-    neigh_r = np.asarray(net_vug.pore["radius_inscribed"])[boundary_new]
-    conn_radius = np.clip(
-        0.35 * neigh_r + 0.10 * r_ins,
-        1.10 * throat_r_median,
-        2.80 * throat_r_median,
-    )
-
-    p1_length = np.minimum(0.40 * direct_length, 0.80 * r_ins)
-    p2_length = np.minimum(0.40 * direct_length, 0.80 * neigh_r)
-    core_length = np.maximum(
-        direct_length - p1_length - p2_length, 0.02 * direct_length
-    )
-
-    conn_area = np.pi * conn_radius**2
-    conn_perimeter = 2.0 * np.pi * conn_radius
-    conn_volume = conn_area * core_length
-
-    throat_append = {
-        "radius_inscribed": conn_radius,
-        "diameter_inscribed": 2.0 * conn_radius,
-        "area": conn_area,
-        "perimeter": conn_perimeter,
-        "shape_factor": np.full(boundary_new.size, CIRCULAR_SHAPE_FACTOR, dtype=float),
-        "length": direct_length,
-        "direct_length": direct_length,
-        "pore1_length": p1_length,
-        "core_length": core_length,
-        "pore2_length": p2_length,
-        "volume": conn_volume,
-    }
-    for key in list(net_vug.throat.keys()):
-        arr = np.asarray(net_vug.throat[key])
-        if arr.ndim >= 1 and arr.shape[0] == subnet.Nt:
-            ext = throat_append.get(
-                key,
-                np.zeros((boundary_new.size,) + arr.shape[1:], dtype=arr.dtype),
-            )
-            net_vug.throat[key] = np.concatenate([arr, ext], axis=0)
-
-    # Extend pore labels and add dedicated vug label.
-    for key, mask in list(net_vug.pore_labels.items()):
-        m = np.asarray(mask, dtype=bool)
-        if m.shape == (subnet.Np,):
-            net_vug.pore_labels[key] = np.concatenate([m, np.array([False])])
-    vug_label = np.zeros(net_vug.Np, dtype=bool)
-    vug_label[vug_idx] = True
-    net_vug.pore_labels["vug"] = vug_label
-
-    # Extend throat labels and add vug-connection label.
-    for key, mask in list(net_vug.throat_labels.items()):
-        m = np.asarray(mask, dtype=bool)
-        if m.shape == (subnet.Nt,):
-            net_vug.throat_labels[key] = np.concatenate(
-                [m, np.zeros(boundary_new.size, dtype=bool)]
-            )
-    vug_conn = np.zeros(net_vug.Nt, dtype=bool)
-    vug_conn[subnet.Nt :] = True
-    net_vug.throat_labels["vug_connection"] = vug_conn
-
-    net_vug.extra = {
-        **net_vug.extra,
-        "vug_radii_xyz_m": (rx, ry, rz),
-        "vug_equivalent_radius_m": r_eq,
-        "vug_removed_pores": int(inside.sum()),
-        "vug_boundary_neighbors": int(boundary_new.size),
-    }
-
-    metadata = {
-        "inside_mask_original": inside,
-        "outside_neighbors_original": outside_neighbors,
-        "removed_pores": int(inside.sum()),
-        "boundary_neighbors": int(boundary_new.size),
-        "equivalent_radius_m": float(r_eq),
-    }
-    return net_vug, metadata
 
 def save_network_png_matplotlib(
     *,
