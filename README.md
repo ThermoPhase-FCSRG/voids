@@ -133,6 +133,18 @@ The repository includes paired notebooks and `py:percent` scripts under `noteboo
   - manufactured 3D void image, PoreSpy extraction, import into `voids`, and serialization
 - `05_mwe_cartesian_mesh_network`
   - configurable 2D/3D mesh-like pore networks, flow solve, Plotly visualization, and HDF5 export
+- `06_mwe_real_porespy_extraction`
+  - real segmented Ketton image, PoreSpy extraction, `voids` import, solve, and diagnostics
+- `07_mwe_synthetic_vug_case`
+  - grayscale synthetic vug volume preprocessing, extraction, solve, and pruning comparison
+- `08_mwe_image_based_vug_shape_sensitivity`
+  - controlled baseline vs spherical/ellipsoidal vug study with porosity, `Kabs`, and network statistics
+- `09_mwe_image_based_vug_sensitivity_2d`
+  - simplified 2D image-based baseline vs circular/elliptical vug study with porosity, `Kabs`, and `K/K0` distributions
+- `10_mwe_lattice_based_vug_sensitivity`
+  - lattice-based stochastic baselines with spherical/ellipsoidal vug insertion, `Kabs`/porosity sensitivity, and `K/K0` distributions
+- `11_mwe_lattice_based_vug_sensitivity_2d`
+  - simplified 2D lattice counterpart with circular/elliptical vugs, multi-baseline sensitivity, and `K/K0` frequency distributions
 
 Example data under `examples/data/` includes a deterministic manufactured void image and
 generated artifacts from the extraction/mesh notebooks.

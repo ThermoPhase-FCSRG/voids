@@ -27,7 +27,11 @@ classifiers = [
 dependencies = [
   "numpy>=1.26",
   "scipy>=1.11",
+  "scikit-image>=0.22",
+  "porespy>=2.4",
   "h5py>=3.10",
+  "plotly>=5.0",
+  "pyvista>=0.43",
   "typing_extensions>=4.10",
 ]
 
@@ -47,9 +51,7 @@ viz = [
   "pyvista>=0.43",
 ]
 test = [
-  "porespy>=2.4",
   "openpnm>=3.6,<3.7",
-  "scikit-image>=0.22",
   "networkx>=3.2",
 ]
 

@@ -17,6 +17,8 @@
 # Companion Data for Digital Porous Media Tutorials [Dataset]. Digital Porous Media Portal.
 # https://doi.org/10.17612/2k9b-1h71
 #
+#
+#
 
 # %%
 import matplotlib.pyplot as plt
@@ -38,7 +40,7 @@ from voids.physics.singlephase import (
 )
 from voids.visualization import plot_network_plotly
 from voids.workflows import (
-    extract_spanning_porespy_network,
+    extract_spanning_pore_network,
     infer_sample_axes,
     preprocess_grayscale_cylindrical_volume,
 )
@@ -55,6 +57,8 @@ pre = preprocess_grayscale_cylindrical_volume(
     background_value=0.0,
     threshold_method="otsu",
     void_phase="dark",
+    show_progress=True,
+    progress_desc="MWE07: filling cylindrical support slices",
 )
 
 crop_y0, crop_y1, crop_x0, crop_x1 = pre.crop.crop_bounds_yx
@@ -86,6 +90,8 @@ print("Longest axis for flow analysis:", flow_axis)
 # ## Raw, cropped, and binarized views
 #
 # The first panel shows the middle raw slice with the largest common rectangle overlaid. The remaining panels show the cropped grayscale slice, the binary void/solid segmentation, and the grayscale histogram used to choose the threshold.
+#
+#
 #
 #
 
@@ -138,7 +144,7 @@ plt.tight_layout()
 plt.show()
 
 # %%
-extract = extract_spanning_porespy_network(
+extract = extract_spanning_pore_network(
     im,
     voxel_size=voxel_size,
     flow_axis=flow_axis,
@@ -151,7 +157,7 @@ extract = extract_spanning_porespy_network(
     },
 )
 
-print("PoreSpy version:", extract.porespy_version)
+print("Backend version:", extract.backend_version)
 print("Extracted keys sample:", list(extract.network_dict.keys())[:10])
 
 # %%
@@ -231,6 +237,8 @@ print("Saved:", out_seg)
 # Inspect standard pore-network diagnostics on the pruned longest-axis spanning network obtained from the cropped and thresholded vug volume.
 #
 #
+#
+#
 
 # %%
 pore_size_m, pore_size_field = characteristic_size(net.pore, expected_shape=(net.Np,))
@@ -299,6 +307,8 @@ print(f"Max coordination number: {coordination.max()}")
 # ## Pruning Comparison
 #
 # Compare the full extracted network (`net_full`) against the longest-axis spanning pruned network (`net`) to quantify what pruning removed and which transport-relevant statistics were preserved.
+#
+#
 #
 #
 
@@ -495,6 +505,8 @@ print(
 # ## Interactive network visualization
 #
 # Visualize the extracted pore network with pores colored by pressure using Plotly for full 3D interactivity. The marker and throat sizes now follow the available characteristic-size fields automatically.
+#
+#
 #
 #
 

@@ -166,7 +166,7 @@ def test_network_to_pyvista_polydata_supports_all_numeric_fields_and_validates_s
 ) -> None:
     """Test PolyData conversion, scalar attachment, and scalar validation."""
 
-    monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
+    monkeypatch.setattr("voids.visualization.pyvista.pv", _FakePV)
 
     poly = network_to_pyvista_polydata(
         line_network,
@@ -199,7 +199,7 @@ def test_plot_network_pyvista_falls_back_from_tubes_and_saves_screenshot(
 ) -> None:
     """Test PyVista plotting fallback from tubes and screenshot capture."""
 
-    monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
+    monkeypatch.setattr("voids.visualization.pyvista.pv", _FakePV)
 
     screenshot = tmp_path / "mesh.png"
     with pytest.warns(UserWarning, match="tube filter failed.*RuntimeError"):
@@ -230,7 +230,7 @@ def test_plot_network_pyvista_falls_back_from_variable_throat_tubes(
 ) -> None:
     """Test that fallback for variable throat sizes warns about accuracy loss."""
 
-    monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
+    monkeypatch.setattr("voids.visualization.pyvista.pv", _FakePV)
     line_network.throat["diameter_equivalent"] = np.array([0.5, 1.5])
 
     # tube_should_raise=True by default; variable throat sizes trigger tube rendering.
@@ -291,6 +291,28 @@ def test_plotly_point_size_acts_as_reference_with_auto_size_fields(line_network)
     assert not np.all(marker_sizes == marker_sizes[0])
 
 
+def test_plotly_size_limits_none_none_disables_default_clipping(line_network) -> None:
+    """Test optional disabling of Plotly default size clipping."""
+
+    line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 100.0])
+    line_network.throat["diameter_equivalent"] = np.array([0.1, 1.0])
+
+    fig = plot_network_plotly(
+        line_network,
+        point_size=6.0,
+        line_width=2.0,
+        point_size_limits=(None, None),
+        throat_size_limits=(None, None),
+    )
+
+    marker_sizes = np.asarray(fig.data[0].marker.size, dtype=float)
+    # With clipping disabled, the largest marker should exceed the default cap of 24 px.
+    assert float(marker_sizes.max()) > 24.0
+    # With clipping disabled, the smallest throat can fall below default min of 0.75 px.
+    throat_widths = np.array([float(trace.line.width) for trace in fig.data[1:]], dtype=float)
+    assert float(throat_widths.min()) < 0.75
+
+
 def test_size_resolution_helpers_cover_auto_named_and_explicit_modes(monkeypatch) -> None:
     """Test size helper branches used by Plotly and PyVista visualizations."""
 
@@ -346,7 +368,7 @@ def test_plotly_auto_sized_markers_keep_diameter_mode_without_point_scalars(line
 def test_plot_network_pyvista_auto_sizes_points_and_throats(monkeypatch, line_network) -> None:
     """Test automatic PyVista sphere and tube sizing from characteristic diameters."""
 
-    monkeypatch.setattr("voids.visualization.pyvista._require_pyvista", lambda: _FakePV)
+    monkeypatch.setattr("voids.visualization.pyvista.pv", _FakePV)
     _FakePolyData.tube_should_raise = False
     line_network.pore["diameter_equivalent"] = np.array([1.0, 2.0, 4.0])
     line_network.throat["diameter_equivalent"] = np.array([0.5, 1.5])

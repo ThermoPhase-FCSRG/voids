@@ -9,12 +9,17 @@ platforms = ["linux-64", "osx-arm64", "win-64"]
 python = ">=3.11,<3.13"
 numpy = ">=1.26,<2.2"
 scipy = ">=1.11"
+scikit-image = ">=0.22"
 h5py = ">=3.10"
 typing_extensions = ">=4.10"
 ipykernel = ">=7.2.0,<8"
+tqdm = ">=4.67.3,<5"
+plotly = ">=5.0"
 
 [pypi-dependencies]
 voids = { path = ".", editable = true }
+porespy = ">=2.4"
+pyvista = ">=0.43"
 
 [target.unix.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -55,20 +60,14 @@ pre-commit = ">=3.7"
 ipython = ">=8.0"
 jupyterlab = ">=4.0"
 matplotlib = ">=3.8"
-plotly = ">=5.0"
-
-[feature.dev.pypi-dependencies]
-porespy = ">=2.4"
+jupytext = ">=1.19.1,<2"
+pandas = ">=3.0.1,<4"
 
 [feature.viz.dependencies]
 vtk = "9.*"
 trame = "3.*"
 
-[feature.viz.pypi-dependencies]
-pyvista = ">=0.43"
-
 [feature.test.dependencies]
-scikit-image = ">=0.22"
 networkx = ">=3.2"
 
 [feature.test.pypi-dependencies]
