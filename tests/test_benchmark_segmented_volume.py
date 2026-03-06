@@ -52,3 +52,12 @@ def test_benchmark_segmented_volume_with_openpnm_rejects_nonbinary_inputs() -> N
 
     with pytest.raises(ValueError, match="phases must be binary with void=1 and solid=0"):
         benchmark_segmented_volume_with_openpnm(phases, voxel_size=1.0)
+
+
+def test_benchmark_segmented_volume_with_openpnm_rejects_invalid_rank() -> None:
+    """Test rank validation before binary-value checks or optional imports."""
+
+    phases = np.array([0, 1, 0, 1], dtype=int)
+
+    with pytest.raises(ValueError, match="phases must be a 2D or 3D binary segmented volume"):
+        benchmark_segmented_volume_with_openpnm(phases, voxel_size=1.0)
