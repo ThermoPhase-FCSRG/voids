@@ -45,7 +45,7 @@ from voids.physics.singlephase import (
     solve,
 )
 from voids.visualization import plot_network_plotly
-from voids.workflows import (
+from voids.generators import (
     build_lattice_vug_templates_2d,
     insert_vug_superpore_2d,
     update_network_geometry_2d,

@@ -10,7 +10,7 @@ from voids.core.network import Network
 from voids.core.provenance import Provenance
 from voids.core.sample import SampleGeometry
 from voids.graph import spanning_subnetwork
-from voids.io import ensure_cartesian_boundary_labels, from_porespy, scale_porespy_geometry
+from voids.io.porespy import ensure_cartesian_boundary_labels, from_porespy, scale_porespy_geometry
 
 
 @dataclass(slots=True)
