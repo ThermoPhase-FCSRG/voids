@@ -19,17 +19,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install voids with docs dependencies
-        run: pip install -e ".[docs]"
+      - name: Install Pixi
+        uses: prefix-dev/setup-pixi@v0
 
       - name: Build docs
-        run: mkdocs build --strict
+        run: pixi run -e docs mkdocs build --strict
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

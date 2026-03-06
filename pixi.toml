@@ -83,4 +83,4 @@ mkdocstrings = {version = ">=0.25", extras = ["python"]}
 [environments]
 default = { features = ["dev", "viz"], solve-group = "default" }
 test = { features = ["dev", "viz", "test"], solve-group = "default" }
-docs = { features = ["docs"], no-default-feature = true, solve-group = "docs" }
+docs = { features = ["docs"], solve-group = "docs" }
