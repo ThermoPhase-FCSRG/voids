@@ -261,14 +261,10 @@ def evaluate_case(
         fluid=FluidSinglePhase(viscosity=1.0e-3),
         bc=bc,
         axis=FLOW_AXIS,
-        options=SinglePhaseOptions(
-            conductance_model="valvatne_blunt_baseline", solver="direct"
-        ),
+        options=SinglePhaseOptions(conductance_model="valvatne_blunt_baseline", solver="direct"),
     )
 
-    pore_size_m, pore_size_field = characteristic_size(
-        net.pore, expected_shape=(net.Np,)
-    )
+    pore_size_m, pore_size_field = characteristic_size(net.pore, expected_shape=(net.Np,))
     coordination = coordination_numbers(net)
     kabs = float(res.permeability[FLOW_AXIS])
     k_ratio = 1.0 if baseline_kabs is None else (kabs / baseline_kabs)
@@ -295,9 +291,7 @@ def evaluate_case(
         "rx_vox": int(radii_vox[0]),
         "ry_vox": int(radii_vox[1]),
         "rz_vox": int(radii_vox[2]),
-        "equivalent_radius_vox": (
-            0.0 if min(radii_vox) <= 0 else equivalent_radius_3d(radii_vox)
-        ),
+        "equivalent_radius_vox": (0.0 if min(radii_vox) <= 0 else equivalent_radius_3d(radii_vox)),
         "added_void_vox": added_void_vox,
         "phi_image": float(segmented.mean()),
         "phi_abs": float(absolute_porosity(net)),
@@ -417,9 +411,7 @@ for baseline_id in baseline_images:
 mid_x = SHAPE[0] // 2
 ncols = min(5, N_BASELINES)
 nrows = (N_BASELINES + ncols - 1) // ncols
-fig, axes = plt.subplots(
-    nrows, ncols, figsize=(3.5 * ncols, 3.3 * nrows), squeeze=False
-)
+fig, axes = plt.subplots(nrows, ncols, figsize=(3.5 * ncols, 3.3 * nrows), squeeze=False)
 
 baseline_ids = sorted(baseline_images.keys())
 for idx, baseline_id in enumerate(baseline_ids):
@@ -562,9 +554,7 @@ for row in all_results:
 # %%
 templates_by_orientation = {
     "spherical": [t for t in vug_templates if t["orientation"] == "isotropic"],
-    "flow_stretched": [
-        t for t in vug_templates if t["orientation"] == "flow_stretched"
-    ],
+    "flow_stretched": [t for t in vug_templates if t["orientation"] == "flow_stretched"],
     "orthogonal_stretched": [
         t for t in vug_templates if t["orientation"] == "orthogonal_stretched"
     ],
@@ -617,9 +607,7 @@ for baseline_id in iter_progress(
                     rotation=90,
                 )
 
-    fig.suptitle(
-        f"Baseline B{baseline_id}: post-vug middle YZ slices (x={mid_x})", fontsize=12
-    )
+    fig.suptitle(f"Baseline B{baseline_id}: post-vug middle YZ slices (x={mid_x})", fontsize=12)
     plt.tight_layout()
     plt.show()
 
@@ -663,12 +651,8 @@ for family, orientation, color in orientation_groups:
     r_eq = np.array([aggregated[k]["equivalent_radius_vox"] for k in keys], dtype=float)
     k_mean = np.array([np.mean(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
     k_std = np.array([np.std(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
-    phi_mean = 100.0 * np.array(
-        [np.mean(aggregated[k]["phi_image"]) for k in keys], dtype=float
-    )
-    phi_std = 100.0 * np.array(
-        [np.std(aggregated[k]["phi_image"]) for k in keys], dtype=float
-    )
+    phi_mean = 100.0 * np.array([np.mean(aggregated[k]["phi_image"]) for k in keys], dtype=float)
+    phi_std = 100.0 * np.array([np.std(aggregated[k]["phi_image"]) for k in keys], dtype=float)
 
     label = f"{family} | {orientation}"
     axes[0].errorbar(
@@ -725,16 +709,12 @@ for row in all_results:
     if str(row["family"]) == "baseline":
         continue
     radius_key = round(float(row["equivalent_radius_vox"]), 2)
-    cfg_label = (
-        f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
-    )
+    cfg_label = f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
     if radius_key not in kk0_by_radius_and_config:
         kk0_by_radius_and_config[radius_key] = {}
     if cfg_label not in kk0_by_radius_and_config[radius_key]:
         kk0_by_radius_and_config[radius_key][cfg_label] = []
-    kk0_by_radius_and_config[radius_key][cfg_label].append(
-        float(row["K_ratio_to_baseline"])
-    )
+    kk0_by_radius_and_config[radius_key][cfg_label].append(float(row["K_ratio_to_baseline"]))
 
 radius_keys = sorted(kk0_by_radius_and_config.keys())
 ncols_hist = min(4, max(1, len(radius_keys)))
@@ -791,9 +771,7 @@ else:
     cwd = Path.cwd().resolve()
     repo_root = None
     for candidate in (cwd, *cwd.parents):
-        if (candidate / "pixi.toml").exists() and (
-            candidate / "src" / "voids"
-        ).exists():
+        if (candidate / "pixi.toml").exists() and (candidate / "src" / "voids").exists():
             repo_root = candidate
             break
     if repo_root is not None:
@@ -832,9 +810,7 @@ for case_name in iter_progress(
         try:
             save_network_png_matplotlib(
                 net=all_diagnostics[case_name]["net"],
-                pore_pressure=np.asarray(
-                    all_diagnostics[case_name]["pore_pressure"], dtype=float
-                ),
+                pore_pressure=np.asarray(all_diagnostics[case_name]["pore_pressure"], dtype=float),
                 png_path=png_path,
                 title=str(all_diagnostics[case_name]["plotly_title"]),
                 max_throats=PLOTLY_MAX_THROATS,

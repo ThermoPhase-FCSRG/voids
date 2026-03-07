@@ -128,9 +128,7 @@ for case in case_specs:
             "seed_used": int(seed_used),
             "threshold": float(threshold),
             "phi_truth": float(truth_void.mean()),
-            "segmentation_mismatch": float(
-                np.mean(segmented.astype(bool) != truth_void)
-            ),
+            "segmentation_mismatch": float(np.mean(segmented.astype(bool) != truth_void)),
             **benchmark.to_record(),
         }
     )
@@ -302,6 +300,4 @@ print(
 if max_k_rel < 1.0e-10 and max_q_rel < 1.0e-10:
     print("Agreement remains in the machine-precision regime for all benchmark cases.")
 else:
-    print(
-        "Differences exceeded the expected machine-precision regime; inspect the workflow."
-    )
+    print("Differences exceeded the expected machine-precision regime; inspect the workflow.")

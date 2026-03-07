@@ -111,6 +111,7 @@ print("flow axis:", FLOW_AXIS)
 print("baseline realizations:", N_BASELINES)
 print("equivalent radius levels:", EQUIV_RADII_SPACING)
 
+
 def generate_baseline_network(*, baseline_id: int, seed: int) -> Network:
     """Build one stochastic 2D baseline network realization."""
 
@@ -255,9 +256,7 @@ else:
     cwd = Path.cwd().resolve()
     repo_root = None
     for candidate in (cwd, *cwd.parents):
-        if (candidate / "pixi.toml").exists() and (
-            candidate / "src" / "voids"
-        ).exists():
+        if (candidate / "pixi.toml").exists() and (candidate / "src" / "voids").exists():
             repo_root = candidate
             break
     notebooks_base = (repo_root / "notebooks") if repo_root is not None else cwd
@@ -285,17 +284,13 @@ for baseline_id in iter_progress(
 ):
     net_baseline = baseline_networks[baseline_id]
 
-    bc = PressureBC(
-        f"inlet_{FLOW_AXIS}min", f"outlet_{FLOW_AXIS}max", pin=2.0e5, pout=1.0e5
-    )
+    bc = PressureBC(f"inlet_{FLOW_AXIS}min", f"outlet_{FLOW_AXIS}max", pin=2.0e5, pout=1.0e5)
     baseline_res = solve(
         net_baseline,
         fluid=FluidSinglePhase(viscosity=1.0e-3),
         bc=bc,
         axis=FLOW_AXIS,
-        options=SinglePhaseOptions(
-            conductance_model="generic_poiseuille", solver="direct"
-        ),
+        options=SinglePhaseOptions(conductance_model="generic_poiseuille", solver="direct"),
     )
     k0 = float(baseline_res.permeability[FLOW_AXIS])
     c0 = coordination_numbers(net_baseline)
@@ -314,9 +309,7 @@ for baseline_id in iter_progress(
             "removed_pores": 0,
             "boundary_neighbors": 0,
             "phi_abs": float(absolute_porosity(net_baseline)),
-            f"phi_eff_{FLOW_AXIS}": float(
-                effective_porosity(net_baseline, axis=FLOW_AXIS)
-            ),
+            f"phi_eff_{FLOW_AXIS}": float(effective_porosity(net_baseline, axis=FLOW_AXIS)),
             "K_axis_m2": k0,
             "K_ratio_to_baseline": 1.0,
             "Q_m3_s": float(baseline_res.total_flow_rate),
@@ -371,18 +364,14 @@ for baseline_id in iter_progress(
             radii_xy=radii_xy_m,
         )
         if baseline_id == 1:
-            mask_preview[case_name] = np.asarray(
-                meta["inside_mask_original"], dtype=bool
-            )
+            mask_preview[case_name] = np.asarray(meta["inside_mask_original"], dtype=bool)
 
         res = solve(
             net_vug,
             fluid=FluidSinglePhase(viscosity=1.0e-3),
             bc=bc,
             axis=FLOW_AXIS,
-            options=SinglePhaseOptions(
-                conductance_model="generic_poiseuille", solver="direct"
-            ),
+            options=SinglePhaseOptions(conductance_model="generic_poiseuille", solver="direct"),
         )
 
         k = float(res.permeability[FLOW_AXIS])
@@ -418,8 +407,7 @@ for baseline_id in iter_progress(
                 point_size_limits=PLOTLY_SIZE_LIMITS,
                 throat_size_limits=PLOTLY_SIZE_LIMITS,
                 title=(
-                    f"B{baseline_id} | {tpl['case']} | "
-                    f"K{FLOW_AXIS}={k:.3e} m2 | K/K0={k / k0:.3f}"
+                    f"B{baseline_id} | {tpl['case']} | K{FLOW_AXIS}={k:.3e} m2 | K/K0={k / k0:.3f}"
                 ),
                 layout_kwargs=PLOTLY_LAYOUT,
             )
@@ -472,9 +460,7 @@ nx, ny = MESH_SHAPE_2D
 preview_cases = sorted(mask_preview.keys())
 ncols = 5
 nrows = (len(preview_cases) + ncols - 1) // ncols
-fig, axes = plt.subplots(
-    nrows, ncols, figsize=(3.2 * ncols, 2.9 * nrows), squeeze=False
-)
+fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.9 * nrows), squeeze=False)
 
 for idx, case_name in enumerate(preview_cases):
     ax = axes[idx // ncols, idx % ncols]
@@ -524,17 +510,11 @@ for family, orientation, color in orientation_groups:
     if not keys:
         continue
 
-    r_eq = np.array(
-        [aggregated[k]["equivalent_radius_spacing"] for k in keys], dtype=float
-    )
+    r_eq = np.array([aggregated[k]["equivalent_radius_spacing"] for k in keys], dtype=float)
     k_mean = np.array([np.mean(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
     k_std = np.array([np.std(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
-    phi_mean = 100.0 * np.array(
-        [np.mean(aggregated[k]["phi_abs"]) for k in keys], dtype=float
-    )
-    phi_std = 100.0 * np.array(
-        [np.std(aggregated[k]["phi_abs"]) for k in keys], dtype=float
-    )
+    phi_mean = 100.0 * np.array([np.mean(aggregated[k]["phi_abs"]) for k in keys], dtype=float)
+    phi_std = 100.0 * np.array([np.std(aggregated[k]["phi_abs"]) for k in keys], dtype=float)
 
     label = f"{family} | {orientation}"
     axes[0].errorbar(
@@ -584,9 +564,7 @@ for row in all_results:
     if str(row["family"]) == "baseline":
         continue
     r_key = round(float(row["equivalent_radius_spacing"]), 3)
-    cfg_label = (
-        f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
-    )
+    cfg_label = f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
 
     if r_key not in kk0_by_radius_and_config:
         kk0_by_radius_and_config[r_key] = {}
