@@ -9,8 +9,8 @@ from voids.geom import (
     normalize_characteristic_size,
 )
 from voids.image import segmentation as iseg
-from voids.io import network_extraction as nex
-from voids.io import (
+from voids.image import network_extraction as nex
+from voids.image import (
     extract_spanning_pore_network,
     infer_sample_axes,
 )

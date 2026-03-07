@@ -59,7 +59,7 @@ from voids.generators import (
     make_synthetic_grayscale_2d,
 )
 from voids.image import binarize_2d_with_voids, has_spanning_cluster_2d
-from voids.io import extract_spanning_pore_network
+from voids.image import extract_spanning_pore_network
 
 
 # %%

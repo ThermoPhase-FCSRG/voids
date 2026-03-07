@@ -175,7 +175,7 @@ def extract_spanning_pore_network(
     provenance_notes :
         Optional extra provenance metadata attached to the resulting network.
     strict :
-        Forwarded to :func:`voids.io.from_porespy`.
+        Forwarded to :func:`voids.io.porespy.from_porespy`.
 
     Returns
     -------

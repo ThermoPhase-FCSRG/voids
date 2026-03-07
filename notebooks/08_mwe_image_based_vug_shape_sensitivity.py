@@ -59,7 +59,7 @@ from voids.generators import (
     make_synthetic_grayscale,
 )
 from voids.image import binarize_grayscale_volume, has_spanning_cluster
-from voids.io import extract_spanning_pore_network
+from voids.image import extract_spanning_pore_network
 
 
 def iter_progress(

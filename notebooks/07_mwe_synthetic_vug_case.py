@@ -40,7 +40,7 @@ from voids.physics.singlephase import (
 )
 from voids.visualization import plot_network_plotly
 from voids.image import preprocess_grayscale_cylindrical_volume
-from voids.io import extract_spanning_pore_network, infer_sample_axes
+from voids.image import extract_spanning_pore_network, infer_sample_axes
 
 examples_data = data_path()
 
