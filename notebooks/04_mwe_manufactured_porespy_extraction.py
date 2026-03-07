@@ -96,7 +96,9 @@ try:
         if regions is None and isinstance(snow, dict):
             regions = snow.get("regions", None)
         if regions is None:
-            raise RuntimeError("Could not find a network dict or regions in snow2 result")
+            raise RuntimeError(
+                "Could not find a network dict or regions in snow2 result"
+            )
         net_dict = ps.networks.regions_to_network(regions)
 
     print("Extracted keys sample:", list(net_dict.keys())[:10])
@@ -139,7 +141,9 @@ res = solve(
     fluid=FluidSinglePhase(viscosity=1.0e-3),
     bc=bc,
     axis="x",
-    options=SinglePhaseOptions(conductance_model="valvatne_blunt_baseline", solver="direct"),
+    options=SinglePhaseOptions(
+        conductance_model="valvatne_blunt_baseline", solver="direct"
+    ),
 )
 print("Q =", res.total_flow_rate)
 print("Kx =", res.permeability["x"])
@@ -172,6 +176,8 @@ try:
     )
     fig.show()
     print(f"Network: {net.Np} pores, {net.Nt} throats")
-    print(f"Pressure range: {res.pore_pressure.min():.2e} to {res.pore_pressure.max():.2e} Pa")
+    print(
+        f"Pressure range: {res.pore_pressure.min():.2e} to {res.pore_pressure.max():.2e} Pa"
+    )
 except ImportError as exc:
     print(exc)

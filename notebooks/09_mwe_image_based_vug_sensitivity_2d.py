@@ -101,7 +101,9 @@ MAX_MATRIX_TRIES = 100
 # `compare` runs both generators with the same baseline ids and vug configs.
 # `single` runs only `MATRIX_GENERATOR_SINGLE`.
 MATRIX_GENERATOR_MODE = os.environ.get("VOIDS_MATRIX_GENERATOR_MODE", "compare")
-MATRIX_GENERATOR_SINGLE = os.environ.get("VOIDS_MATRIX_GENERATOR_SINGLE", "voronoi_edges")
+MATRIX_GENERATOR_SINGLE = os.environ.get(
+    "VOIDS_MATRIX_GENERATOR_SINGLE", "voronoi_edges"
+)
 
 # Baseline generators supported by this notebook:
 # - voronoi_edges: naturally connected low-porosity edge network (void = ~matrix)
@@ -279,13 +281,17 @@ def evaluate_case_2d(
     )
     net = extract.net
 
-    bc = PressureBC(f"inlet_{FLOW_AXIS}min", f"outlet_{FLOW_AXIS}max", pin=2.0e5, pout=1.0e5)
+    bc = PressureBC(
+        f"inlet_{FLOW_AXIS}min", f"outlet_{FLOW_AXIS}max", pin=2.0e5, pout=1.0e5
+    )
     res = solve(
         net,
         fluid=FluidSinglePhase(viscosity=1.0e-3),
         bc=bc,
         axis=FLOW_AXIS,
-        options=SinglePhaseOptions(conductance_model="valvatne_blunt_baseline", solver="direct"),
+        options=SinglePhaseOptions(
+            conductance_model="valvatne_blunt_baseline", solver="direct"
+        ),
     )
 
     kabs = float(res.permeability[FLOW_AXIS])
@@ -314,7 +320,9 @@ def evaluate_case_2d(
         "config_index": config_index,
         "rx_vox": int(radii_vox[0]),
         "ry_vox": int(radii_vox[1]),
-        "equivalent_radius_vox": (0.0 if min(radii_vox) <= 0 else equivalent_radius_2d(radii_vox)),
+        "equivalent_radius_vox": (
+            0.0 if min(radii_vox) <= 0 else equivalent_radius_2d(radii_vox)
+        ),
         "added_void_pixels": added_void_pixels,
         "phi_image": float(segmented.mean()),
         "phi_abs": float(absolute_porosity(net)),
@@ -439,7 +447,9 @@ for generator_name in MATRIX_GENERATORS:
     baseline_images = baseline_images_by_generator[generator_name]
     ncols = min(3, N_BASELINES)
     nrows = (N_BASELINES + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 4.0 * nrows), squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(4.2 * ncols, 4.0 * nrows), squeeze=False
+    )
 
     baseline_ids = sorted(baseline_images.keys())
     for idx, baseline_id in enumerate(baseline_ids):
@@ -511,7 +521,9 @@ for generator_index, generator_name in enumerate(MATRIX_GENERATORS, start=1):
 
             case_name = f"{case_prefix}B{baseline_id}_{case_root}"
             if family == "circular":
-                case_void, _ = insert_circular_vug_2d(baseline_void, radius_vox=radii[0])
+                case_void, _ = insert_circular_vug_2d(
+                    baseline_void, radius_vox=radii[0]
+                )
             else:
                 case_void, _ = insert_elliptical_vug_2d(baseline_void, radii_vox=radii)
 
@@ -527,7 +539,13 @@ for generator_index, generator_name in enumerate(MATRIX_GENERATORS, start=1):
                 radii_vox=radii,
                 binary_void=case_void,
                 baseline_void=baseline_void,
-                case_seed=(BASE_SEED + 20000 + 100000 * generator_index + 1000 * baseline_id + j),
+                case_seed=(
+                    BASE_SEED
+                    + 20000
+                    + 100000 * generator_index
+                    + 1000 * baseline_id
+                    + j
+                ),
                 baseline_kabs=baseline_kabs,
             )
             all_results.append(row)
@@ -566,7 +584,9 @@ for generator_name in MATRIX_GENERATORS:
 
     ncols = 4
     nrows = (len(b1_cases) + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 3.5 * nrows), squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(3.8 * ncols, 3.5 * nrows), squeeze=False
+    )
 
     for idx, case_name in enumerate(b1_cases):
         ax = axes[idx // ncols, idx % ncols]
@@ -579,7 +599,9 @@ for generator_name in MATRIX_GENERATORS:
     for idx in range(len(b1_cases), nrows * ncols):
         axes[idx // ncols, idx % ncols].axis("off")
 
-    fig.suptitle(f"Baseline B1 [{generator_name}]: void images before and after vug insertion")
+    fig.suptitle(
+        f"Baseline B1 [{generator_name}]: void images before and after vug insertion"
+    )
     plt.tight_layout()
     plt.show()
 
@@ -634,13 +656,19 @@ for row_idx, generator_name in enumerate(generators_in_results):
         if not keys:
             continue
 
-        r_eq = np.array([aggregated[k]["equivalent_radius_vox"] for k in keys], dtype=float)
-        k_mean = np.array([np.mean(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
+        r_eq = np.array(
+            [aggregated[k]["equivalent_radius_vox"] for k in keys], dtype=float
+        )
+        k_mean = np.array(
+            [np.mean(aggregated[k]["k_ratio"]) for k in keys], dtype=float
+        )
         k_std = np.array([np.std(aggregated[k]["k_ratio"]) for k in keys], dtype=float)
         phi_mean = 100.0 * np.array(
             [np.mean(aggregated[k]["phi_image"]) for k in keys], dtype=float
         )
-        phi_std = 100.0 * np.array([np.std(aggregated[k]["phi_image"]) for k in keys], dtype=float)
+        phi_std = 100.0 * np.array(
+            [np.std(aggregated[k]["phi_image"]) for k in keys], dtype=float
+        )
 
         label = f"{family} | {orientation}"
         ax_phi.errorbar(
@@ -686,7 +714,11 @@ plt.show()
 
 # %%
 for generator_name in sorted(
-    {str(row["matrix_generator"]) for row in all_results if str(row["family"]) != "baseline"}
+    {
+        str(row["matrix_generator"])
+        for row in all_results
+        if str(row["family"]) != "baseline"
+    }
 ):
     kk0_by_radius_and_config: dict[float, dict[str, list[float]]] = {}
     for row in all_results:
@@ -696,13 +728,17 @@ for generator_name in sorted(
             continue
 
         radius_key = round(float(row["equivalent_radius_vox"]), 3)
-        cfg_label = f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
+        cfg_label = (
+            f"{row['family']} | {row['orientation']} | cfg{int(row['config_index'])}"
+        )
 
         if radius_key not in kk0_by_radius_and_config:
             kk0_by_radius_and_config[radius_key] = {}
         if cfg_label not in kk0_by_radius_and_config[radius_key]:
             kk0_by_radius_and_config[radius_key][cfg_label] = []
-        kk0_by_radius_and_config[radius_key][cfg_label].append(float(row["K_ratio_to_baseline"]))
+        kk0_by_radius_and_config[radius_key][cfg_label].append(
+            float(row["K_ratio_to_baseline"])
+        )
 
     radius_keys = sorted(kk0_by_radius_and_config.keys())
     ncols_hist = min(4, max(1, len(radius_keys)))
@@ -743,7 +779,9 @@ for generator_name in sorted(
     for ax in axes.flat[len(radius_keys) :]:
         ax.axis("off")
 
-    fig.suptitle(f"K/K0 frequency distributions by equivalent vug radius [{generator_name}]")
+    fig.suptitle(
+        f"K/K0 frequency distributions by equivalent vug radius [{generator_name}]"
+    )
     plt.tight_layout()
     plt.show()
 
@@ -759,7 +797,9 @@ else:
     cwd = Path.cwd().resolve()
     repo_root = None
     for candidate in (cwd, *cwd.parents):
-        if (candidate / "pixi.toml").exists() and (candidate / "src" / "voids").exists():
+        if (candidate / "pixi.toml").exists() and (
+            candidate / "src" / "voids"
+        ).exists():
             repo_root = candidate
             break
     notebooks_base = (repo_root / "notebooks") if repo_root is not None else cwd
@@ -793,7 +833,9 @@ for case_name in iter_progress(
         try:
             save_network_png_matplotlib_2d(
                 net=all_diagnostics[case_name]["net"],
-                pore_pressure=np.asarray(all_diagnostics[case_name]["pore_pressure"], dtype=float),
+                pore_pressure=np.asarray(
+                    all_diagnostics[case_name]["pore_pressure"], dtype=float
+                ),
                 png_path=png_path,
                 title=str(all_diagnostics[case_name]["plotly_title"]),
                 max_throats=PLOTLY_MAX_THROATS,

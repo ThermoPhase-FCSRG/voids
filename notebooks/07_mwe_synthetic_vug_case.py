@@ -62,7 +62,9 @@ crop_y0, crop_y1, crop_x0, crop_x1 = pre.crop.crop_bounds_yx
 crop = pre.crop.cropped
 threshold = pre.threshold
 im = pre.binary
-_, axis_lengths, axis_areas, flow_axis = infer_sample_axes(im.shape, voxel_size=voxel_size)
+_, axis_lengths, axis_areas, flow_axis = infer_sample_axes(
+    im.shape, voxel_size=voxel_size
+)
 
 print(
     "Raw grayscale shape:",
@@ -73,7 +75,9 @@ print(
 )
 print("Crop bounds (y0, y1, x0, x1):", (crop_y0, crop_y1, crop_x0, crop_x1))
 print("Cropped shape:", crop.shape)
-print(f"{pre.threshold_method.title()} threshold on cropped grayscale volume = {threshold:.2f}")
+print(
+    f"{pre.threshold_method.title()} threshold on cropped grayscale volume = {threshold:.2f}"
+)
 print(f"Void phase assumption = {pre.void_phase}")
 print(f"Void fraction after binarization = {float(im.mean()):.4f}")
 print("Axis lengths:", axis_lengths)
@@ -166,7 +170,9 @@ pore_idx_keep = extract.pore_indices
 throat_mask_keep = extract.throat_mask
 
 print(f"Imported full network: {net_full.Np} pores, {net_full.Nt} throats")
-print(f"Pruned longest-axis ({flow_axis}) spanning network: {net.Np} pores, {net.Nt} throats")
+print(
+    f"Pruned longest-axis ({flow_axis}) spanning network: {net.Np} pores, {net.Nt} throats"
+)
 print(
     f"Removed disconnected material: {net_full.Np - net.Np} pores, {net_full.Nt - net.Nt} throats"
 )
@@ -184,13 +190,17 @@ print(
 # Single-phase solve on the pruned spanning network.
 # Because the TIFF has no calibration metadata here, lengths are in voxel units and
 # permeability is reported in voxel-scaled units rather than a physical SI unit.
-bc = PressureBC(f"inlet_{flow_axis}min", f"outlet_{flow_axis}max", pin=2.0e5, pout=1.0e5)
+bc = PressureBC(
+    f"inlet_{flow_axis}min", f"outlet_{flow_axis}max", pin=2.0e5, pout=1.0e5
+)
 res = solve(
     net,
     fluid=FluidSinglePhase(viscosity=1.0e-3),
     bc=bc,
     axis=flow_axis,
-    options=SinglePhaseOptions(conductance_model="valvatne_blunt_baseline", solver="direct"),
+    options=SinglePhaseOptions(
+        conductance_model="valvatne_blunt_baseline", solver="direct"
+    ),
 )
 print("Q =", res.total_flow_rate)
 print(f"K{flow_axis} (length unit = voxel) =", res.permeability[flow_axis])
@@ -229,7 +239,9 @@ print("Saved:", out_seg)
 
 # %%
 pore_size_m, pore_size_field = characteristic_size(net.pore, expected_shape=(net.Np,))
-throat_size_m, throat_size_field = characteristic_size(net.throat, expected_shape=(net.Nt,))
+throat_size_m, throat_size_field = characteristic_size(
+    net.throat, expected_shape=(net.Nt,)
+)
 pore_size_name = pore_size_field.replace("_", " ")
 throat_size_name = throat_size_field.replace("_", " ")
 pore_size_vox = pore_size_m / voxel_size
@@ -250,13 +262,17 @@ axes[0, 0].set_ylabel("Count")
 axes[0, 0].set_title("Pore size distribution")
 axes[0, 0].grid(alpha=0.3, linestyle=":")
 
-axes[0, 1].hist(throat_size_vox, bins=25, color="tab:orange", edgecolor="black", alpha=0.8)
+axes[0, 1].hist(
+    throat_size_vox, bins=25, color="tab:orange", edgecolor="black", alpha=0.8
+)
 axes[0, 1].set_xlabel(f"Throat {throat_size_name} [voxel]")
 axes[0, 1].set_ylabel("Count")
 axes[0, 1].set_title("Throat size distribution")
 axes[0, 1].grid(alpha=0.3, linestyle=":")
 
-axes[1, 0].bar(coord_vals, coord_counts, width=0.8, color="tab:green", edgecolor="black", alpha=0.8)
+axes[1, 0].bar(
+    coord_vals, coord_counts, width=0.8, color="tab:green", edgecolor="black", alpha=0.8
+)
 axes[1, 0].set_xlabel("Coordination number")
 axes[1, 0].set_ylabel("Pore count")
 axes[1, 0].set_title("Coordination number distribution")
@@ -297,7 +313,9 @@ print(f"Max coordination number: {coordination.max()}")
 full_pore_size_m, full_pore_size_field = characteristic_size(
     net_full.pore, expected_shape=(net_full.Np,)
 )
-pruned_pore_size_m, pruned_pore_size_field = characteristic_size(net.pore, expected_shape=(net.Np,))
+pruned_pore_size_m, pruned_pore_size_field = characteristic_size(
+    net.pore, expected_shape=(net.Np,)
+)
 full_pore_size_vox = full_pore_size_m / voxel_size
 pruned_pore_size_vox = pruned_pore_size_m / voxel_size
 full_coordination = coordination_numbers(net_full)
@@ -305,7 +323,9 @@ pruned_coordination = coordination_numbers(net)
 full_pore_volume = np.asarray(
     net_full.pore.get("region_volume", net_full.pore["volume"]), dtype=float
 )
-pruned_pore_volume = np.asarray(net.pore.get("region_volume", net.pore["volume"]), dtype=float)
+pruned_pore_volume = np.asarray(
+    net.pore.get("region_volume", net.pore["volume"]), dtype=float
+)
 
 phi_abs_full = absolute_porosity(net_full)
 phi_abs_pruned = absolute_porosity(net)
@@ -321,7 +341,9 @@ removed_components = n_comp_full - n_comp_pruned
 retained_pore_fraction = net.Np / net_full.Np if net_full.Np else np.nan
 retained_throat_fraction = net.Nt / net_full.Nt if net_full.Nt else np.nan
 retained_pore_volume_fraction = (
-    pruned_pore_volume.sum() / full_pore_volume.sum() if full_pore_volume.sum() else np.nan
+    pruned_pore_volume.sum() / full_pore_volume.sum()
+    if full_pore_volume.sum()
+    else np.nan
 )
 full_coordination_weights = (
     np.full(full_coordination.shape, 1.0 / full_coordination.size)
@@ -451,21 +473,27 @@ axes[1, 1].set_title("Coordination distribution: full vs pruned")
 axes[1, 1].grid(alpha=0.3, linestyle=":", axis="y")
 axes[1, 1].legend()
 
-fig.suptitle(f"Pruning impact on the longest-axis ({flow_axis}) vug network", fontsize=14)
+fig.suptitle(
+    f"Pruning impact on the longest-axis ({flow_axis}) vug network", fontsize=14
+)
 plt.tight_layout()
 plt.show()
 
 print(
     f"Full network: {net_full.Np} pores, {net_full.Nt} throats, {n_comp_full} connected components"
 )
-print(f"Pruned network: {net.Np} pores, {net.Nt} throats, {n_comp_pruned} connected components")
+print(
+    f"Pruned network: {net.Np} pores, {net.Nt} throats, {n_comp_pruned} connected components"
+)
 print(
     f"Removed by pruning: {removed_pores} pores, {removed_throats} throats, {removed_components} components"
 )
 print(
     f"Retained fractions: pores={100.0 * retained_pore_fraction:.2f}%, throats={100.0 * retained_throat_fraction:.2f}%, pore volume={100.0 * retained_pore_volume_fraction:.2f}%"
 )
-print(f"Absolute porosity: full={100.0 * phi_abs_full:.3f}%, pruned={100.0 * phi_abs_pruned:.3f}%")
+print(
+    f"Absolute porosity: full={100.0 * phi_abs_full:.3f}%, pruned={100.0 * phi_abs_pruned:.3f}%"
+)
 print(
     f"Effective porosity ({flow_axis}): full={100.0 * phi_eff_full:.3f}%, pruned={100.0 * phi_eff_pruned:.3f}%"
 )

@@ -22,7 +22,9 @@ throat_conns = np.array([[0, 1], [1, 2], [1, 3], [1, 4], [2, 5]], dtype=int)
 net = Network(
     throat_conns=throat_conns,
     pore_coords=pore_coords,
-    sample=SampleGeometry(bulk_volume=20.0, lengths={"x": 2.0}, cross_sections={"x": 1.0}),
+    sample=SampleGeometry(
+        bulk_volume=20.0, lengths={"x": 2.0}, cross_sections={"x": 1.0}
+    ),
     pore={
         "volume": np.ones(len(pore_coords)),
         "pressure_demo": np.linspace(1, 0, len(pore_coords)),
