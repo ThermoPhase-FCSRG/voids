@@ -63,9 +63,9 @@ The rendered documentation is intended to live alongside the repository at
 
 This repository is configured for Pixi and exposes three main environments:
 
-- `default`: development + plotting + PyVista
-- `test`: everything in `default` plus OpenPNM and test-only dependencies
-- `lbm`: development + test dependencies plus the optional XLB stack
+- `default`: core library + plotting + PyVista + OpenPNM
+- `test`: everything in `default` plus test-only dependencies
+- `lbm`: test environment plus the optional XLB stack
 - `docs`: MkDocs, Material for MkDocs, and mkdocstrings
 
 ```bash
