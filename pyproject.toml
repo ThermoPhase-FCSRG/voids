@@ -58,12 +58,13 @@ docs = [
   "mkdocs>=1.5,<2.0",
   "mkdocs-material>=9.5",
   "mkdocstrings[python]>=0.25",
+  "ruff>=0.6",
 ]
 
 [project.urls]
-Homepage = "https://github.com/volpatto/voids"
-Repository = "https://github.com/volpatto/voids"
-Issues = "https://github.com/volpatto/voids/issues"
+Homepage = "https://github.com/geomech-project/voids"
+Repository = "https://github.com/geomech-project/voids"
+Issues = "https://github.com/geomech-project/voids/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/voids"]

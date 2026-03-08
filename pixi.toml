@@ -78,6 +78,12 @@ mkdocs = ">=1.5,<2.0"
 mkdocs-material = ">=9.5"
 mkdocstrings = {version = ">=0.25", extras = ["python"]}
 
+[feature.docs.dependencies]
+ruff = ">=0.6"
+
+[feature.docs.activation.env]
+NO_MKDOCS_2_WARNING = "1"
+
 [environments]
 default = { features = ["dev", "viz"], solve-group = "default" }
 test = { features = ["dev", "viz", "test"], solve-group = "default" }
