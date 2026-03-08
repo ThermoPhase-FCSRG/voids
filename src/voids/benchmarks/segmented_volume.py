@@ -5,6 +5,10 @@ from typing import Any
 
 import numpy as np
 
+from voids.benchmarks._shared import (
+    make_benchmark_pressure_bc,
+    resolve_benchmark_pressures,
+)
 from voids.benchmarks.crosscheck import (
     SinglePhaseCrosscheckSummary,
     crosscheck_singlephase_with_openpnm,
@@ -67,6 +71,15 @@ class SegmentedVolumeCrosscheckResult:
         Porosity diagnostics computed from the pruned extracted network.
     summary :
         Comparison summary between `voids` and OpenPNM.
+
+    Notes
+    -----
+    This high-level benchmark follows the same public pressure-BC convention as
+    `benchmark_segmented_volume_with_xlb`: the preferred user input is
+    ``delta_p``, while optional ``pin`` / ``pout`` values can still be used to
+    preserve an absolute pressure gauge. The applied physical pressures and
+    pressure drop are recorded explicitly in
+    :meth:`SegmentedVolumeCrosscheckResult.to_record`.
     """
 
     extract: NetworkExtractionResult
@@ -103,6 +116,9 @@ class SegmentedVolumeCrosscheckResult:
                 details.get("conductance_model", self.options.conductance_model)
             ),
             "solver_voids": str(details.get("solver_voids", self.options.solver)),
+            "p_inlet_physical": float(self.bc.pin),
+            "p_outlet_physical": float(self.bc.pout),
+            "dp_physical": float(self.bc.pin - self.bc.pout),
             "backend": str(self.extract.backend),
             "backend_version": self.extract.backend_version,
             "openpnm_version": details.get("openpnm_version"),
@@ -115,8 +131,9 @@ def benchmark_segmented_volume_with_openpnm(
     voxel_size: float,
     flow_axis: str | None = None,
     fluid: FluidSinglePhase | None = None,
-    pin: float = 2.0e5,
-    pout: float = 1.0e5,
+    delta_p: float | None = None,
+    pin: float | None = None,
+    pout: float | None = None,
     options: SinglePhaseOptions | None = None,
     length_unit: str = "m",
     pressure_unit: str = "Pa",
@@ -136,8 +153,18 @@ def benchmark_segmented_volume_with_openpnm(
         Requested transport axis. When omitted, the longest image axis is used.
     fluid :
         Fluid properties. Defaults to water-like viscosity `1e-3 Pa s`.
+    delta_p :
+        Preferred physical pressure drop for the benchmark, typically in Pa.
+        When provided alone, the wrapper uses `pout = 0` and `pin = delta_p` as
+        a gauge choice. When combined with one of `pin` or `pout`, the missing
+        value is inferred. When combined with both, consistency with
+        ``pin - pout`` is enforced.
     pin, pout :
-        Inlet and outlet pressures used for the comparison.
+        Optional absolute physical inlet and outlet pressures. They are kept for
+        backward compatibility and for cases where the user wants to preserve a
+        particular pressure reference level. For the current incompressible
+        benchmark, only the pressure drop ``pin - pout`` affects the reported
+        permeability.
     options :
         Solver controls. Defaults to the image-workflow baseline
         ``valvatne_blunt_baseline`` with the direct linear solver.
@@ -155,6 +182,12 @@ def benchmark_segmented_volume_with_openpnm(
     SegmentedVolumeCrosscheckResult
         Extraction metadata, porosity diagnostics, and the OpenPNM comparison.
 
+    Raises
+    ------
+    ValueError
+        If the image is invalid, the pressure specification is inconsistent, or
+        the implied pressure drop is not positive.
+
     Notes
     -----
     This helper uses :func:`voids.benchmarks.crosscheck_singlephase_with_openpnm`,
@@ -162,10 +195,24 @@ def benchmark_segmented_volume_with_openpnm(
     resulting comparison isolates extraction consistency, boundary-condition
     handling, and linear-solver agreement; it does not benchmark independent
     conductance models between packages.
+
+    Unlike the XLB high-level benchmark, no fluid-density-based unit conversion
+    is needed here because both sides solve the same extracted pore network
+    directly under the same physical pressure BC.
+
+    The absolute pressure offset is numerically immaterial for this current
+    incompressible benchmark. For example, ``delta_p=1``, ``pin=1``/``pout=0``,
+    and ``delta_p=1`` with ``pin=101326``/``pout=101325`` all impose the same
+    permeability-driving pressure drop.
     """
 
     arr = _as_binary_volume(phases)
     image_phi = float(arr.mean())
+    pin_used, pout_used, _ = resolve_benchmark_pressures(
+        delta_p=delta_p,
+        pin=pin,
+        pout=pout,
+    )
 
     notes = dict(provenance_notes or {})
     notes.setdefault("benchmark_kind", "segmented_volume_openpnm")
@@ -187,7 +234,7 @@ def benchmark_segmented_volume_with_openpnm(
         solver="direct",
     )
     axis = extract.flow_axis
-    bc = PressureBC(f"inlet_{axis}min", f"outlet_{axis}max", pin=float(pin), pout=float(pout))
+    bc = make_benchmark_pressure_bc(axis, pin=pin_used, pout=pout_used)
     summary = crosscheck_singlephase_with_openpnm(
         extract.net,
         fluid=fluid_used,
