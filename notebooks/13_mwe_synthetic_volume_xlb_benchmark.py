@@ -1,9 +1,10 @@
 # %% [markdown]
 # # MWE 13 - Synthetic porous-volume benchmark against XLB
 #
-# This notebook generates synthetic segmented spanning volumes with `voids`, solves them directly
-# on the binary image with XLB, extracts pore networks with `snow2`, and compares `Kabs` estimates
-# between the direct-image voxel-scale LBM reference and the extracted-network PNM workflow.
+# This notebook generates fifteen synthetic segmented spanning volumes with `voids`, solves them
+# directly on the binary image with XLB, extracts pore networks with `snow2`, and compares `Kabs`
+# estimates between the direct-image voxel-scale LBM reference and the extracted-network PNM
+# workflow.
 #
 # Scientific scope and assumptions:
 # - the benchmark works on binary segmented images directly; it does not include scanner-physics
@@ -20,7 +21,10 @@
 # - XLB is an optional dependency; run this notebook in the Pixi `lbm` environment
 
 # %%
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from voids.benchmarks import XLBOptions, benchmark_segmented_volume_with_xlb
@@ -37,7 +41,7 @@ options = SinglePhaseOptions(
     solver="direct",
 )
 xlb_options = XLBOptions(
-    max_steps=2000,
+    max_steps=2500,
     min_steps=400,
     check_interval=50,
     steady_rtol=1.0e-3,
@@ -47,27 +51,128 @@ xlb_options = XLBOptions(
     inlet_outlet_buffer_cells=6,
 )
 
+
+def _find_project_root() -> Path:
+    cwd = Path.cwd().resolve()
+    for candidate in (cwd, *cwd.parents):
+        if (candidate / "mkdocs.yml").exists() and (candidate / "docs").exists():
+            return candidate
+    return cwd
+
+
+project_root = _find_project_root()
+report_dir = project_root / "docs" / "assets" / "verification"
+report_dir.mkdir(parents=True, exist_ok=True)
+report_csv = report_dir / "xlb_15_case_results.csv"
+representative_figure_path = report_dir / "xlb_representative_case.png"
+comparison_figure_path = report_dir / "xlb_permeability_scatter_and_error.png"
+porosity_figure_path = report_dir / "xlb_porosity_vs_permeability.png"
+
 case_specs = [
+    {
+        "case": "phi028_b12",
+        "shape": (24, 24, 24),
+        "porosity": 0.28,
+        "blobiness": 1.2,
+        "seed_start": 101,
+    },
+    {
+        "case": "phi028_b14",
+        "shape": (24, 24, 24),
+        "porosity": 0.28,
+        "blobiness": 1.4,
+        "seed_start": 135,
+    },
+    {
+        "case": "phi028_b15",
+        "shape": (24, 24, 24),
+        "porosity": 0.28,
+        "blobiness": 1.5,
+        "seed_start": 152,
+    },
+    {
+        "case": "phi032_b12",
+        "shape": (24, 24, 24),
+        "porosity": 0.32,
+        "blobiness": 1.2,
+        "seed_start": 271,
+    },
     {
         "case": "phi032_b14",
         "shape": (24, 24, 24),
         "porosity": 0.32,
         "blobiness": 1.4,
-        "seed_start": 401,
+        "seed_start": 305,
     },
     {
-        "case": "phi036_b16",
+        "case": "phi032_b15",
+        "shape": (24, 24, 24),
+        "porosity": 0.32,
+        "blobiness": 1.5,
+        "seed_start": 322,
+    },
+    {
+        "case": "phi036_b12",
         "shape": (24, 24, 24),
         "porosity": 0.36,
-        "blobiness": 1.6,
-        "seed_start": 601,
+        "blobiness": 1.2,
+        "seed_start": 441,
     },
     {
-        "case": "phi041_b14",
+        "case": "phi036_b14",
         "shape": (24, 24, 24),
-        "porosity": 0.41,
+        "porosity": 0.36,
         "blobiness": 1.4,
-        "seed_start": 1301,
+        "seed_start": 475,
+    },
+    {
+        "case": "phi036_b15",
+        "shape": (24, 24, 24),
+        "porosity": 0.36,
+        "blobiness": 1.5,
+        "seed_start": 492,
+    },
+    {
+        "case": "phi040_b12",
+        "shape": (24, 24, 24),
+        "porosity": 0.40,
+        "blobiness": 1.2,
+        "seed_start": 611,
+    },
+    {
+        "case": "phi040_b14",
+        "shape": (24, 24, 24),
+        "porosity": 0.40,
+        "blobiness": 1.4,
+        "seed_start": 645,
+    },
+    {
+        "case": "phi040_b15",
+        "shape": (24, 24, 24),
+        "porosity": 0.40,
+        "blobiness": 1.5,
+        "seed_start": 662,
+    },
+    {
+        "case": "phi044_b12",
+        "shape": (24, 24, 24),
+        "porosity": 0.44,
+        "blobiness": 1.2,
+        "seed_start": 781,
+    },
+    {
+        "case": "phi044_b14",
+        "shape": (24, 24, 24),
+        "porosity": 0.44,
+        "blobiness": 1.4,
+        "seed_start": 815,
+    },
+    {
+        "case": "phi044_b15",
+        "shape": (24, 24, 24),
+        "porosity": 0.44,
+        "blobiness": 1.5,
+        "seed_start": 832,
     },
 ]
 case_specs
@@ -76,7 +181,8 @@ case_specs
 # ## Generate binary benchmark cases and compare `voids` against XLB
 #
 # Each case is a percolating segmented void image. XLB sees the binary image directly, while `voids`
-# extracts a spanning pore network from the same image before solving.
+# extracts a spanning pore network from the same image before solving. This notebook also writes a
+# CSV summary and figure assets used by the documentation report under `docs/assets/verification/`.
 
 # %%
 benchmark_rows: list[dict[str, object]] = []
@@ -121,6 +227,10 @@ for case in case_specs:
     }
 
 summary_df = pd.DataFrame(benchmark_rows)
+summary_df["k_factor_gap"] = np.maximum(
+    summary_df["k_ratio_voids_to_xlb"],
+    1.0 / summary_df["k_ratio_voids_to_xlb"],
+)
 display_columns = [
     "case",
     "seed_used",
@@ -141,6 +251,22 @@ display_columns = [
     "xlb_convergence_metric",
 ]
 summary_df.loc[:, display_columns]
+summary_df.loc[:, display_columns].to_csv(report_csv, index=False)
+
+# %%
+summary_stats = pd.Series(
+    {
+        "n_cases": int(len(summary_df)),
+        "mean_rel_diff_pct": float(summary_df["k_rel_diff_pct"].mean()),
+        "median_rel_diff_pct": float(summary_df["k_rel_diff_pct"].median()),
+        "max_rel_diff_pct": float(summary_df["k_rel_diff_pct"].max()),
+        "mean_factor_gap": float(summary_df["k_factor_gap"].mean()),
+        "median_factor_gap": float(summary_df["k_factor_gap"].median()),
+        "max_factor_gap": float(summary_df["k_factor_gap"].max()),
+    },
+    name="value",
+)
+summary_stats.to_frame()
 
 # %% [markdown]
 # ## Representative binary slice and XLB axial-velocity field
@@ -149,7 +275,7 @@ summary_df.loc[:, display_columns]
 # direct-image reference solution is well aligned with the segmented geometry.
 
 # %%
-representative_case = "phi036_b16"
+representative_case = "phi036_b14"
 artifact = case_artifacts[representative_case]
 segmented = artifact["segmented"]
 benchmark = artifact["benchmark"]
@@ -181,6 +307,7 @@ axes[2].grid(True, alpha=0.3)
 
 fig.suptitle("Representative direct-image XLB diagnostics", fontsize=14)
 plt.tight_layout()
+fig.savefig(representative_figure_path, dpi=160, bbox_inches="tight")
 plt.show()
 
 print("Representative XLB converged:", benchmark.xlb_result.converged)
@@ -220,11 +347,46 @@ axes[1].set_title("Per-case permeability mismatch")
 axes[1].tick_params(axis="x", rotation=25)
 
 plt.tight_layout()
+fig.savefig(comparison_figure_path, dpi=160, bbox_inches="tight")
 plt.show()
 
 summary_df.loc[
     :, ["case", "k_voids", "k_xlb", "k_rel_diff_pct", "xlb_steps", "xlb_converged"]
 ]
+
+# %% [markdown]
+# ## Permeability trend with porosity
+#
+# This view is useful for checking whether the extracted-network workflow follows
+# the same overall porosity-permeability trend as the direct-image XLB reference.
+
+# %%
+plot_df = summary_df.sort_values(["phi_image", "blobiness"]).copy()
+fig, ax = plt.subplots(figsize=(7.5, 4.8))
+
+ax.semilogy(
+    plot_df["phi_image"],
+    plot_df["k_xlb"],
+    marker="o",
+    lw=1.5,
+    label="XLB",
+)
+ax.semilogy(
+    plot_df["phi_image"],
+    plot_df["k_voids"],
+    marker="s",
+    lw=1.5,
+    label="voids",
+)
+ax.set_xlabel("image porosity [-]")
+ax.set_ylabel("permeability [m$^2$]")
+ax.set_title("Permeability trend across the 15-case verification set")
+ax.grid(True, which="both", alpha=0.3)
+ax.legend()
+
+plt.tight_layout()
+fig.savefig(porosity_figure_path, dpi=160, bbox_inches="tight")
+plt.show()
 
 # %% [markdown]
 # ## Notes
