@@ -82,6 +82,10 @@ case_specs
 # Each case is built from a percolating synthetic void image. We then generate a synthetic grayscale
 # realization, segment it with Otsu thresholding, extract the spanning pore network with `snow2`, and
 # compare `voids` against OpenPNM on the extracted network.
+#
+# This high-level benchmark now uses `delta_p` as the preferred physical input. Here we choose
+# `delta_p = 1 Pa` and rely on the default gauge choice `pout = 0 Pa`, `pin = delta_p`. For the
+# present incompressible benchmark, any common offset added to both pressures would be equivalent.
 
 # %%
 benchmark_rows: list[dict[str, object]] = []
@@ -114,6 +118,7 @@ for case in case_specs:
         voxel_size=voxel_size,
         flow_axis=flow_axis,
         fluid=fluid,
+        delta_p=1.0,
         options=options,
         provenance_notes={
             "benchmark_case": case["case"],
