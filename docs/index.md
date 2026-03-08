@@ -6,6 +6,7 @@
 
 [![Tests](https://github.com/geomech-project/voids/actions/workflows/tests.yml/badge.svg)](https://github.com/geomech-project/voids/actions/workflows/tests.yml)
 [![Coverage](https://codecov.io/gh/geomech-project/voids/branch/main/graph/badge.svg)](https://codecov.io/gh/geomech-project/voids)
+[![Supported OS](https://img.shields.io/badge/OS-Linux%20%7C%20macOS%20%7C%20Windows-blue)](https://github.com/geomech-project/voids/actions/workflows/tests.yml)
 
 **`voids`** is a scientific Python package for pore network modeling (PNM) aimed at
 research workflows where reproducibility, explicit assumptions, and validation matter.
@@ -39,10 +40,11 @@ from segmented images to simulation results involves many implicit choices:
 If you are new to the project, the shortest useful path is:
 
 1. [Getting Started](getting_started.md) for installation and the minimal solve
-2. [Scientific Workflow](workflow.md) for image-based or imported-network studies
-3. [Theoretical Background](background.md) for governing equations and assumptions
-4. [Examples](examples.md) for notebook-scale workflows
-5. [API Reference](api/index.md) for callable details
+2. [Concepts and Conventions](concepts.md) for the canonical data model and units
+3. [Scientific Workflow](workflow.md) for image-based or imported-network studies
+4. [Theoretical Background](background.md) for governing equations and assumptions
+5. [Examples](examples.md) for notebook-scale workflows
+6. [API Reference](api/index.md) for callable details
 
 ---
 
@@ -65,6 +67,24 @@ or extraction tooling such as PoreSpy.
 That division of responsibility is deliberate: segmentation assumptions and network
 construction assumptions should remain visible in the provenance trail instead of
 being hidden behind a single opaque entry point.
+
+---
+
+## Documentation Philosophy
+
+The documentation is intended to answer two different kinds of questions:
+
+- **Usage questions**: how to install `voids`, import a network, solve flow, and
+  reproduce a workflow
+- **Technical questions**: what the canonical schema means, what assumptions enter
+  porosity and permeability calculations, and how the solver interprets boundary labels
+
+Those two goals are intentionally separated across the documentation tree:
+
+- [Getting Started](getting_started.md) and [Examples](examples.md) are task-oriented
+- [Concepts and Conventions](concepts.md) and [Theoretical Background](background.md)
+  are interpretation-oriented
+- [API Reference](api/index.md) is interface-oriented
 
 ---
 
@@ -112,7 +132,8 @@ print("mass_balance_error =", result.mass_balance_error)
 See [Getting Started](getting_started.md) for installation and a full walkthrough.
 
 For imported or extracted networks, the more realistic next step is
-[Scientific Workflow](workflow.md), which shows how to attach units, geometry, and
+[Concepts and Conventions](concepts.md) and
+[Scientific Workflow](workflow.md), which show how to attach units, geometry, and
 provenance before solving.
 
 ---

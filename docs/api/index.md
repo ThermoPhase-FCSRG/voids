@@ -23,6 +23,24 @@
 
 ---
 
+## Common Tasks
+
+If you already know what you want to do, these are the main entry points:
+
+| Task | Primary API |
+|---|---|
+| Create a minimal synthetic network | `voids.examples.make_linear_chain_network` |
+| Create a structured mesh-like network | `voids.examples.make_cartesian_mesh_network` |
+| Scale an imported network from voxel units | `voids.io.porespy.scale_porespy_geometry` |
+| Infer Cartesian boundary labels | `voids.io.porespy.ensure_cartesian_boundary_labels` |
+| Import a PoreSpy/OpenPNM-style dictionary | `voids.io.porespy.from_porespy` |
+| Compute porosity and connectivity diagnostics | `voids.physics.petrophysics` |
+| Solve single-phase flow | `voids.physics.singlephase.solve` |
+| Save and reload a canonical network | `voids.io.hdf5.save_hdf5`, `voids.io.hdf5.load_hdf5` |
+| Cross-check a workflow against OpenPNM conventions | `voids.benchmarks.crosscheck` |
+
+---
+
 ## Public Top-Level Imports
 
 The main `voids` package re-exports the three primary data structures:
@@ -37,3 +55,7 @@ The package version is available as:
 import voids
 print(voids.__version__)
 ```
+
+For the data model and interpretation behind these APIs, see
+[Concepts and Conventions](../concepts.md) and
+[Theoretical Background](../background.md).

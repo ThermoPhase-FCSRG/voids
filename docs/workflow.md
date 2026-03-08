@@ -5,6 +5,9 @@ research setting.
 The emphasis is not just "getting a permeability number", but also recording the
 assumptions that make that number interpretable.
 
+For the underlying object model and naming conventions used here, read
+[Concepts and Conventions](concepts.md) alongside this page.
+
 ---
 
 ## Recommended Sequence
@@ -137,6 +140,7 @@ segmentation or extraction itself.
 ## Where To Go Next
 
 - Use [Getting Started](getting_started.md) for installation and the minimal synthetic example.
+- Use [Concepts and Conventions](concepts.md) for the canonical schema, unit semantics, and label conventions.
 - Use [Examples](examples.md) to pick a notebook matching your workflow.
 - Use [Theoretical Background](background.md) when you need the governing equations and assumptions.
 - Use [API Reference](api/index.md) for the exact callable interfaces.

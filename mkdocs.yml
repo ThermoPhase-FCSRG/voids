@@ -80,6 +80,7 @@ extra:
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
+  - Concepts and Conventions: concepts.md
   - Scientific Workflow: workflow.md
   - Examples: examples.md
   - Theoretical Background: background.md

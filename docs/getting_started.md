@@ -98,6 +98,9 @@ Assumptions to keep in mind:
 - `viscosity=1.0` is dimensionless unless you also define consistent physical units
 - permeability is only meaningful when the attached `SampleGeometry` is physically meaningful
 
+For the canonical data model, label conventions, and unit expectations behind that
+example, see [Concepts and Conventions](concepts.md).
+
 For extracted or imported networks, continue with
 [Scientific Workflow](workflow.md) rather than copying the synthetic example verbatim.
 

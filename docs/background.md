@@ -25,6 +25,20 @@ and a characteristic diameter \(d_k\).
     such as [PoreSpy](https://porespy.org). The canonical representation only enters
     once a `Network` object is constructed or imported.
 
+### Canonical Representation
+
+Within `voids`, the graph is represented explicitly by:
+
+- pore coordinates `pore_coords`
+- throat connectivity `throat_conns`
+- pore-wise and throat-wise property arrays
+- boolean pore and throat labels
+- sample-scale geometry and provenance metadata
+
+This separation is not just a software design choice.
+It reflects the fact that topology, constitutive geometry, sample geometry, and
+workflow provenance play different scientific roles and should be inspected separately.
+
 ---
 
 ## Hydraulic Conductance
@@ -71,6 +85,16 @@ where \(\mathbf{A}\) is the weighted graph Laplacian assembled from throat
 conductances, \(\mathbf{p}\) is the unknown pressure vector, and \(\mathbf{b}\)
 encodes the Dirichlet boundary contributions.
 
+In expanded graph form, the diagonal and off-diagonal entries satisfy
+
+\[
+A_{ii} = \sum_{j \in \mathcal{N}(i)} g_{ij},
+\qquad
+A_{ij} = -g_{ij} \quad (i \neq j),
+\]
+
+for free pores in the active solve domain.
+
 ### Boundary Conditions
 
 Fixed pressures are imposed at inlet and outlet pore sets via Dirichlet row/column
@@ -78,6 +102,25 @@ elimination:
 
 - \(p_{\text{inlet}} = p_{\text{in}}\)
 - \(p_{\text{outlet}} = p_{\text{out}}\)
+
+The current solver uses label-driven Dirichlet conditions.
+In practice, that means the physical experiment is defined partly by geometry and
+partly by the pore labels attached to the network.
+
+### Active Solve Domain
+
+Connected components that do not touch any fixed-pressure pore are excluded from the
+linear solve.
+Those components form floating-pressure blocks and would otherwise leave the system
+singular or under-determined.
+
+As a result:
+
+- the solve is performed on an induced active subnetwork
+- pore pressures outside that subnetwork are reported as `nan`
+- throat fluxes outside that subnetwork are reported as `nan`
+
+This is numerically intentional, not an implementation accident.
 
 ### Permeability Estimation
 
@@ -96,6 +139,13 @@ difference.
 
 The sample geometry (lengths, cross-sections) is stored in the `SampleGeometry`
 object attached to the `Network`.
+
+!!! note "Interpretation boundary"
+    The permeability reported by `voids` is an apparent sample-scale permeability
+    consistent with the supplied network, constitutive conductance model, sample
+    lengths, cross-sections, and boundary labels.
+    Agreement with another solver or another code path does not by itself validate
+    the upstream segmentation or extraction.
 
 ---
 
@@ -129,6 +179,10 @@ Two selection rules are available:
 2. **Boundary-connected**: include any component touching an `inlet_*`, `outlet_*`,
    or `boundary` pore label.
 
+The distinction matters when disconnected void clusters are present.
+Absolute porosity may remain high even when the transport-relevant connected volume
+is much smaller.
+
 ---
 
 ## Graph Connectivity
@@ -136,6 +190,9 @@ Two selection rules are available:
 `voids` uses standard connected-component analysis on the throat graph to identify
 isolated clusters, spanning components, and boundary-connected subsets.
 The implementation wraps `scipy.sparse.csgraph.connected_components`.
+
+For transport interpretation, connectivity is not just a descriptive graph property.
+It directly controls which parts of the network can participate in sample-scale flow.
 
 Key metrics reported by [`connectivity_metrics`][voids.physics.petrophysics.connectivity_metrics]:
 
@@ -164,6 +221,9 @@ The following assumptions are deliberate and should be stated in any study using
    universal physical truth.
 5. **Throat visualization**: pore scalar fields may be arithmetically averaged onto
    throats for visualization; this is a display choice, not a constitutive model.
+6. **Sample metadata dependence**: permeability interpretation depends on the
+   correctness of sample lengths and cross-sectional areas supplied in
+   `SampleGeometry`.
 
 If any of these assumptions are inappropriate for a given study, the corresponding
 workflow should be tightened before using results quantitatively.
