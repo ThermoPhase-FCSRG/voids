@@ -377,6 +377,71 @@ def test_xlb_direct_solver_2d_no_buffer_flow_axis_y(
     assert result.backend_version == "fake-xlb"
 
 
+def test_xlb_inlet_outlet_masks_exclude_solid_voxels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: solid voxels on inlet/outlet planes must not receive pressure BCs.
+
+    When ``inlet_outlet_buffer_cells=0`` the inlet and outlet planes of the
+    sample are used directly as the BC planes.  Before the fix, any interior
+    voxel on those planes – including solids – was assigned a pressure BC.
+    This test verifies that solid cells are excluded from the pressure BC
+    indices and are instead covered by the bounce-back BC.
+    """
+
+    capture, fake_api = _make_fake_xlb_api([0.2, 0.2])
+    monkeypatch.setattr(xlb_mod, "_import_xlb", lambda: fake_api)
+
+    # Flow along x (axis 0).  Shape (3 rows, 5 cols).
+    # Row 0 (inlet):  solid at column 1.
+    # Row 2 (outlet): solid at column 3.
+    # Columns 0 and 4 are sealed side-wall edges.
+    phases = np.array(
+        [
+            [1, 0, 1, 1, 1],  # inlet row: solid at col 1
+            [1, 1, 1, 1, 1],  # interior: all void
+            [1, 1, 1, 0, 1],  # outlet row: solid at col 3
+        ],
+        dtype=int,
+    )
+    solve_binary_volume_with_xlb(
+        phases,
+        voxel_size=1.0,
+        flow_axis="x",
+        options=XLBOptions(
+            max_steps=2,
+            min_steps=1,
+            check_interval=1,
+            steady_rtol=1.0e-12,
+            inlet_outlet_buffer_cells=0,
+        ),
+    )
+
+    bcs = capture["boundary_conditions"]
+    # Expect: inlet pressure BC, outlet pressure BC, bounce-back BC.
+    assert len(bcs) == 3
+
+    # Unpack the per-dimension index lists returned by _mask_to_indices.
+    inlet_cells = set(zip(bcs[0].indices[0], bcs[0].indices[1]))
+    outlet_cells = set(zip(bcs[1].indices[0], bcs[1].indices[1]))
+    bounceback_cells = set(zip(bcs[2].indices[0], bcs[2].indices[1]))
+
+    # Solid cell on the inlet plane must not be assigned a pressure BC …
+    assert (0, 1) not in inlet_cells
+    # … but must be covered by the bounce-back BC.
+    assert (0, 1) in bounceback_cells
+
+    # Solid cell on the outlet plane must not be assigned a pressure BC …
+    assert (2, 3) not in outlet_cells
+    # … but must be covered by the bounce-back BC.
+    assert (2, 3) in bounceback_cells
+
+    # Sanity: interior void cell on the inlet plane IS in the pressure BC.
+    assert (0, 2) in inlet_cells
+    # Sanity: interior void cell on the outlet plane IS in the pressure BC.
+    assert (2, 1) in outlet_cells
+
+
 def test_xlb_direct_solver_warns_when_not_converged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
