@@ -3,9 +3,9 @@
 The `voids.visualization` sub-package provides network rendering via Plotly and
 PyVista.
 
-!!! note "Optional dependency"
-    PyVista is an optional dependency. Install it via the `viz` extra:
-    `pip install "voids[viz]"` or use the `default` or `test` Pixi environment.
+!!! note "PyVista dependency"
+    PyVista is installed as a core dependency of `voids` and is available by
+    default when you install the package.
 
 ---
 

@@ -4,8 +4,8 @@
 
 # voids
 
-[![Tests](https://github.com/ThermoPhase-FCSRG/voids/actions/workflows/tests.yml/badge.svg)](https://github.com/ThermoPhase-FCSRG/voids/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/ThermoPhase-FCSRG/voids/branch/main/graph/badge.svg)](https://codecov.io/gh/ThermoPhase-FCSRG/voids)
+[![Tests](https://github.com/geomech-project/voids/actions/workflows/tests.yml/badge.svg)](https://github.com/geomech-project/voids/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/geomech-project/voids/branch/main/graph/badge.svg)](https://codecov.io/gh/geomech-project/voids)
 
 **`voids`** is a scientific Python package for pore network modeling (PNM) aimed at
 research workflows where reproducibility, explicit assumptions, and validation matter.
