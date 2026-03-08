@@ -4,9 +4,9 @@
 
 # voids
 
-[![Tests](https://github.com/ThermoPhase-FCSRG/voids/actions/workflows/tests.yml/badge.svg)](https://github.com/ThermoPhase-FCSRG/voids/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/ThermoPhase-FCSRG/voids/branch/main/graph/badge.svg)](https://codecov.io/gh/ThermoPhase-FCSRG/voids)
-[![Supported OS](https://img.shields.io/badge/OS-Linux%20%7C%20macOS%20%7C%20Windows-blue)](https://github.com/ThermoPhase-FCSRG/voids/actions/workflows/tests.yml)
+[![Tests](https://github.com/geomech-project/voids/actions/workflows/tests.yml/badge.svg)](https://github.com/geomech-project/voids/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/geomech-project/voids/branch/main/graph/badge.svg)](https://codecov.io/gh/geomech-project/voids)
+[![Supported OS](https://img.shields.io/badge/OS-Linux%20%7C%20macOS%20%7C%20Windows-blue)](https://github.com/geomech-project/voids/actions/workflows/tests.yml)
 
 `voids` is a scientific Python package for pore network modeling (PNM) aimed at
 research workflows where reproducibility, explicit assumptions, and validation matter.
@@ -53,14 +53,18 @@ Important boundaries:
 
 For a more formal statement of scope and assumptions, see [spec_v0_1.md](spec_v0_1.md).
 
+The rendered documentation is intended to live alongside the repository at
+<https://geomech-project.github.io/voids/>.
+
 ## Installation
 
 ### Recommended: Pixi
 
-This repository is configured for Pixi and exposes two main environments:
+This repository is configured for Pixi and exposes three main environments:
 
 - `default`: development + plotting + PyVista
 - `test`: everything in `default` plus OpenPNM and test-only dependencies
+- `docs`: MkDocs, Material for MkDocs, and mkdocstrings
 
 ```bash
 pixi install
@@ -85,7 +89,7 @@ python -m pip install -e .
 Optional extras:
 
 ```bash
-python -m pip install -e ".[dev,viz,test]"
+python -m pip install -e ".[dev,viz,test,docs]"
 ```
 
 Assumption to keep in mind: the notebooks are exercised primarily through the Pixi
@@ -187,3 +191,15 @@ pixi run bump-version 0.1.4
 `voids` is still pre-alpha. The codebase is already useful for controlled PNM experiments,
 solver validation, and interoperability studies, but it should not be described as a
 complete pore-network simulation platform yet.
+
+## Institutional Support
+
+`voids` receives institutional support from the
+[Laboratório Nacional de Computação Científica (LNCC)](https://www.gov.br/lncc/pt-br),
+a research unit of the Ministério da Ciência, Tecnologia e Inovação (MCTI), Brazil.
+
+<p align="center">
+  <a href="https://www.gov.br/lncc/pt-br">
+    <img src="resources/logo/lncc-mcti.svg" alt="LNCC (MCTI) logo" width="820">
+  </a>
+</p>
