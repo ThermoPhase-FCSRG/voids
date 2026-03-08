@@ -41,6 +41,12 @@ class PressureBC:
         Names of pore labels identifying fixed-pressure pores.
     pin, pout :
         Pressure values imposed on inlet and outlet pores.
+
+    Notes
+    -----
+    For the current incompressible single-phase formulation, the physically
+    relevant quantity is the imposed pressure drop ``pin - pout``. Adding the
+    same constant offset to both values is therefore only a gauge choice.
     """
 
     inlet_label: str
@@ -271,6 +277,11 @@ def solve(
 
     where ``Q`` is total inlet flow rate, ``mu`` is viscosity, ``L`` is the sample
     length along ``axis``, and ``A`` is the corresponding cross-sectional area.
+
+    Because the present formulation is incompressible, only the pressure drop
+    ``pin - pout`` enters this permeability calculation. For example,
+    ``pin=1`` / ``pout=0`` and ``pin=101326`` / ``pout=101325`` yield the same
+    current permeability prediction.
 
     Connected components that do not touch any Dirichlet pore are excluded from the
     linear solve because they form floating pressure blocks. Returned pressures and
