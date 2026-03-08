@@ -82,6 +82,14 @@ def test_resolve_benchmark_pressures_supports_delta_p_and_pressure_gauge() -> No
     assert delta_p == pytest.approx(1.0)
 
     pin, pout, delta_p = shared_benchmark_mod.resolve_benchmark_pressures(
+        delta_p=1.0,
+        pin=101326.0,
+    )
+    assert pin == pytest.approx(101326.0)
+    assert pout == pytest.approx(101325.0)
+    assert delta_p == pytest.approx(1.0)
+
+    pin, pout, delta_p = shared_benchmark_mod.resolve_benchmark_pressures(
         pin=101326.0,
         pout=101325.0,
     )
@@ -98,6 +106,9 @@ def test_resolve_benchmark_pressures_supports_delta_p_and_pressure_gauge() -> No
             pin=101326.0,
             pout=101325.0,
         )
+
+    with pytest.raises(ValueError, match="must be finite"):
+        shared_benchmark_mod.resolve_benchmark_pressures(delta_p=float("nan"))
 
 
 def test_benchmark_segmented_volume_with_openpnm_uses_harmonized_pressure_defaults(

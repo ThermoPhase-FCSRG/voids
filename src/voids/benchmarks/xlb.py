@@ -15,6 +15,7 @@ This module exposes two public layers:
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import Any
 import warnings
 
 import numpy as np
@@ -348,7 +349,7 @@ class XLBOptions:
         interpreted in the low-Reynolds, low-Mach limit.
         """
 
-        values: dict[str, float | int | str] = {
+        values: dict[str, Any] = {
             "formulation": "steady_stokes_limit",
             "lattice_viscosity": 0.10,
             "pressure_drop_lattice": DEFAULT_STOKES_PRESSURE_DROP_LATTICE,
