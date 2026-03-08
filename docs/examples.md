@@ -178,9 +178,11 @@ and solver-comparison benchmark.
 
 **`13_mwe_synthetic_volume_xlb_benchmark`**
 
-Builds synthetic segmented spanning volumes, solves them directly with XLB on the
-binary image, extracts pore networks with `snow2`, and compares resulting `Kabs`
-predictions between XLB and `voids`.
+Builds five synthetic segmented spanning volumes, solves them directly with XLB
+on the binary image, extracts pore networks with `snow2`, and compares resulting
+`Kabs` predictions between XLB and `voids`.
 
 This is the notebook to use when the scientific question is whether the extracted
 PNM workflow tracks a higher-fidelity voxel-scale reference closely enough.
+The corresponding narrative report is documented in
+[Verification / XLB Direct-Image Permeability Benchmark](verification/xlb.md).
