@@ -1,47 +1,69 @@
-# Verification
+# Verification & Validation
 
-This section collects controlled verification studies for `voids`.
+This section separates two different kinds of evidence used in `voids`:
 
-The intent is to answer questions such as:
+- **Verification**: benchmarks against software references, manufactured cases,
+  or controlled numerical workflows
+- **Validation**: benchmarks against experimental data
 
-- does `voids` reproduce known manufactured or benchmark behavior?
-- how closely does an extracted-network `voids` workflow track an independent
-  reference discretization on the same geometry?
-- which discrepancies are likely numerical bugs, and which are expected model
-  differences?
+That distinction matters. A software cross-check can show that `voids` is
+numerically consistent with a reference implementation, while an experimental
+comparison asks whether the present workflow predicts a measured physical
+quantity closely enough for the intended scientific use.
 
-Verification is not the same as claiming universal physical validity. In this
-project, the purpose is narrower and more useful: make assumptions explicit,
-quantify disagreement on controlled cases, and keep those checks reproducible as
-the code evolves.
+## Current Structure
 
-Current studies:
+### Verification
+
+The software-verification studies live under [Verification](software.md):
 
 - [OpenPNM extracted-network cross-check](openpnm.md)
-  This report verifies that `voids` agrees with OpenPNM in the
-  machine-precision regime when both solve the same extracted network with the
-  same throat conductances and the same pressure boundary conditions.
-
 - [External `pnextract` / `pnflow` benchmark](pnflow.md)
-  This report compares `voids` against a fixed external reference dataset
-  generated with `pnextract` and `pnflow`, so the mismatch includes extraction
-  and constitutive-model differences rather than just solver differences.
-
 - [XLB direct-image permeability benchmark](xlb.md)
-  This report includes the implemented LBM formulation, the permeability
-  mapping used in `voids`, the shared pressure-drop coupling used between PNM
-  and XLB, and a steady Stokes-limit interpretation of the same XLB operator.
+- [DRP-443 fracture-network verification overview](drp443.md)
+- [DRP-10 Estaillades verification overview](drp10.md)
 
-The three current studies answer different questions:
+### Validation
 
-| Reference | Geometry seen by reference | Main question | Expected agreement |
+The experimental-validation studies live under [Validation](../validation/index.md):
+
+- [DRP-317 sandstone validation overview](../validation/drp317.md)
+- [DRP-317 Parker notebook report](../validation/drp317_parker.md)
+- [DRP-317 Kirby notebook report](../validation/drp317_kirby.md)
+- [DRP-317 Bandera Brown notebook report](../validation/drp317_bandera_brown.md)
+- [DRP-317 Berea Sister Gray notebook report](../validation/drp317_berea_sister_gray.md)
+- [DRP-317 Berea Upper Gray notebook report](../validation/drp317_berea_upper_gray.md)
+- [DRP-317 Berea notebook report](../validation/drp317_berea.md)
+- [DRP-317 Castlegate notebook report](../validation/drp317_castlegate.md)
+- [DRP-317 Buff Berea notebook report](../validation/drp317_buff_berea.md)
+- [DRP-317 Leopard notebook report](../validation/drp317_leopard.md)
+- [DRP-317 Bentheimer notebook report](../validation/drp317_bentheimer.md)
+- [DRP-317 Bandera Gray notebook report](../validation/drp317_banderagray.md)
+
+## What Each Side Answers
+
+| Category | Typical reference | Main question | Expected agreement |
 |---|---|---|---|
-| OpenPNM | Same extracted network as `voids` | Are export/import, BC handling, and solver assembly consistent? | Machine precision |
-| `pnextract` + `pnflow` | Independently extracted pore network | How different is the current `voids` image-to-network workflow from an external PNM workflow? | Moderate mismatch is expected |
-| XLB | Original voxel image | How different is extracted-network PNM from a direct-image voxel-scale reference? | Larger morphology-dependent mismatch is expected |
+| Verification | OpenPNM, `pnflow`, XLB/LBM, OpenFOAM-based paper references, manufactured cases | Is the implementation consistent with a software or numerical reference? | Exact to moderate, depending on shared assumptions |
+| Validation | Experimental porosity and permeability data | Does the current workflow predict the measured physical response closely enough? | Case-dependent; mismatch often reflects extraction and constitutive-model limits |
 
-The corresponding reproducible notebook artifacts are:
+## DRP-317 Source Citations
+
+The current validation set uses:
+
+- Dataset: Neumann, R., ANDREETA, M., Lucas-Oliveira, E. (2020, October 7).
+  *11 Sandstones: raw, filtered and segmented data* [Dataset].
+  Digital Porous Media Portal. <https://www.doi.org/10.17612/f4h1-w124>
+- Experimental reference paper: Neumann, R. F., Barsi-Andreeta, M., Lucas-Oliveira, E.,
+  Barbalho, H., Trevizan, W. A., Bonagamba, T. J., & Steiner, M. B. (2021).
+  *High accuracy capillary network representation in digital rock reveals permeability scaling functions*.
+  *Scientific Reports, 11*, 11370. <https://doi.org/10.1038/s41598-021-90090-0>
+
+The reproducible software-verification notebook artifacts are:
 
 - `notebooks/12_mwe_synthetic_volume_openpnm_benchmark.ipynb`
 - `notebooks/15_mwe_external_pnflow_benchmark.ipynb`
 - `notebooks/13_mwe_synthetic_volume_xlb_benchmark.ipynb`
+- `notebooks/29_mwe_drp443_ifn_raw_porosity_perm.ipynb`
+- `notebooks/30_mwe_drp443_dilatedifn_raw_porosity_perm.ipynb`
+- `notebooks/31_mwe_drp10_estaillades_raw_porosity_perm.ipynb`

@@ -22,6 +22,7 @@ porespy = ">=2.4"
 openpnm = ">=3.6,<3.7"
 pyamg = ">=5.3"
 pyvista = ">=0.43"
+kaleido = ">=0.2.1"
 
 [target.unix.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -53,6 +54,8 @@ register-kernels = "pixi run -e default python -m ipykernel install --user --nam
 unregister-kernels = "python -m jupyter kernelspec uninstall -f voids-default voids-test"
 bump-version = "python scripts/bump_version.py"
 sync-deps = "python scripts/sync_deps.py"
+notebooks-sync = "python scripts/sync_notebooks.py"
+precommit-sync = "python scripts/sync_notebooks.py && pre-commit run --all-files"
 docs-build = "pixi run -e docs mkdocs build"
 docs-serve = "pixi run -e docs mkdocs serve"
 
@@ -89,6 +92,7 @@ ruff = ">=0.6"
 
 [feature.thermo.pypi-dependencies]
 coolprop = ">=6.6"
+thermo = ">=0.6.0, <0.7"
 
 [feature.docs.activation.env]
 NO_MKDOCS_2_WARNING = "1"
