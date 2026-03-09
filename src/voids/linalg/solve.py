@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, cast
+from typing import Protocol, TypeAlias, cast
 
 import numpy as np
 from scipy import sparse
@@ -34,10 +34,10 @@ class _PyAMGModule(Protocol):
         """Build a classical AMG hierarchy."""
 
 
-type SolverParameterValue = (
+SolverParameterValue: TypeAlias = (
     str | float | int | bool | dict[str, object] | LinearOperator[np.float64]
 )
-type SolverParameters = dict[str, SolverParameterValue]
+SolverParameters: TypeAlias = dict[str, SolverParameterValue]
 
 
 def _import_pyamg() -> _PyAMGModule:
