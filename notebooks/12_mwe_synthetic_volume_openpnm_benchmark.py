@@ -33,7 +33,7 @@ axis_index = 0
 voxel_size = 2.0e-6
 fluid = FluidSinglePhase(viscosity=1.0e-3)
 options = SinglePhaseOptions(
-    conductance_model="valvatne_blunt_baseline",
+    conductance_model="valvatne_blunt",
     solver="direct",
 )
 
