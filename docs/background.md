@@ -283,13 +283,14 @@ then applies additional extraction-stage repairs for problematic values, includi
 - assigning pore shape factor as a throat-area-weighted average of neighboring
   throat shape factors
 
-`voids` currently reproduces the **flow closure**, not all of those
-extraction-stage preprocessing choices.
-Therefore:
+`voids` now provides these heuristics through the `imperial_export`
+geometry-repair mode in the PoreSpy importer, and the image-extraction workflow enables that
+mode by default. Therefore:
 
 - if you provide `voids` with a network already carrying `pnextract`-like
-  `shape_factor` and conduit-length fields, the single-phase hydraulic closure
-  should be close to `pnflow`
+  `shape_factor` and conduit-length fields, or if you extract through the
+  default image workflow, the single-phase hydraulic closure should be close to
+  `pnflow`
 - if the network comes from a different extractor, such as a PoreSpy-based
   workflow, `Kabs` can still differ substantially because topology and geometry
   are already different before the conductance model is even applied
