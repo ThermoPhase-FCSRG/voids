@@ -90,6 +90,7 @@ ruff = ">=0.6"
 
 [feature.thermo.pypi-dependencies]
 coolprop = ">=6.6"
+thermo = ">=0.6.0, <0.7"
 
 [feature.docs.activation.env]
 NO_MKDOCS_2_WARNING = "1"

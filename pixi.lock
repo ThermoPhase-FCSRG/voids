@@ -18821,15 +18821,15 @@ packages:
 - pypi: ./
   name: voids
   version: 0.1.4
-  sha256: 924b748b2912b2932416411b39faa88678ab8b641cb761fb4b0fe7e04805fef9
+  sha256: 2b5ecd689b539082727f4ab40665b78e4f3eb81ac0d5641ab1cbe0a00e13d7e2
   requires_dist:
-  - numpy>=1.26
+  - numpy>=1.26,<2.2
   - scipy>=1.11
   - scikit-image>=0.22
   - porespy>=2.4
   - openpnm>=3.6,<3.7
   - pyamg>=5.3
-  - thermo>=0.6
+  - thermo>=0.6.0,<0.7
   - coolprop>=6.6
   - h5py>=3.10
   - plotly>=5.0
