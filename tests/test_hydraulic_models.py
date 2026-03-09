@@ -16,6 +16,7 @@ from voids.geom.hydraulic import (
     _segment_conductance_valvatne_blunt,
     _shape_factor_from_area_perimeter,
     _shape_factor_from_area_inscribed_radius,
+    _throat_only_shape_factor_conductance,
     _sanitize_shape_factor,
     available_conductance_models,
     generic_poiseuille_conductance,
@@ -574,6 +575,46 @@ def test_resolve_pore_throat_viscosities_requires_at_least_one_source(
             line_network,
             viscosity=None,
             pore_viscosity=np.ones(line_network.Np),
+            throat_viscosity=None,
+        )
+
+
+def test_conductance_models_require_explicit_viscosity_input(line_network: Network) -> None:
+    """Conductance models reject missing scalar and throat viscosity inputs."""
+
+    net = line_network.copy()
+    net.throat.pop("hydraulic_conductance", None)
+    net.throat["shape_factor"] = np.full(net.Nt, 1.0 / (4.0 * np.pi))
+    net.throat["area"] = np.ones(net.Nt)
+
+    with pytest.raises(ValueError, match="Need either viscosity or throat_viscosity"):
+        generic_poiseuille_conductance(net, viscosity=None, throat_viscosity=None)
+    with pytest.raises(ValueError, match="Need either viscosity or throat_viscosity"):
+        _throat_only_shape_factor_conductance(net, viscosity=None, throat_viscosity=None)
+    with pytest.raises(ValueError, match="Need either viscosity or throat_viscosity"):
+        valvatne_blunt_throat_conductance(net, viscosity=None, throat_viscosity=None)
+
+
+def test_sensitivity_models_require_explicit_viscosity_input(line_network: Network) -> None:
+    """Sensitivity branches reject missing scalar and throat viscosity inputs."""
+
+    net = line_network.copy()
+    net.throat.pop("hydraulic_conductance", None)
+    net.throat["shape_factor"] = np.full(net.Nt, 1.0 / (4.0 * np.pi))
+    net.throat["area"] = np.ones(net.Nt)
+
+    with pytest.raises(ValueError, match="Need either viscosity or throat_viscosity"):
+        throat_conductance_with_sensitivities(
+            net,
+            viscosity=None,
+            model="generic_poiseuille",
+            throat_viscosity=None,
+        )
+    with pytest.raises(ValueError, match="Need either viscosity or throat_viscosity"):
+        throat_conductance_with_sensitivities(
+            net,
+            viscosity=None,
+            model="valvatne_blunt_throat",
             throat_viscosity=None,
         )
 

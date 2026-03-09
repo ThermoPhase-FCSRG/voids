@@ -197,6 +197,24 @@ def test_solve_linear_system_supports_gmres_with_pyamg_preconditioning() -> None
     assert info["preconditioner"] == "pyamg"
 
 
+@pytest.mark.parametrize("amg_solver", ["rootnode", "ruge_stuben"])
+def test_solve_linear_system_supports_multiple_pyamg_hierarchies(amg_solver: str) -> None:
+    """PyAMG preconditioning supports alternate hierarchy builders."""
+
+    A = sparse.csr_matrix(np.array([[2.0, -1.0], [-1.0, 2.0]]))
+    b = np.array([1.0, 0.0])
+
+    x, info = solve_linear_system(
+        A,
+        b,
+        method="cg",
+        solver_parameters={"preconditioner": "pyamg", "pyamg_solver": amg_solver},
+    )
+
+    assert np.allclose(A @ x, b)
+    assert info["pyamg_solver"] == amg_solver
+
+
 def test_project_and_examples_paths_use_env_overrides(monkeypatch, tmp_path: Path) -> None:
     """Test environment-variable overrides for project and examples paths."""
 

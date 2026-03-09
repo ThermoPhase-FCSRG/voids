@@ -588,3 +588,13 @@ def test_solve_rejects_nonpositive_absolute_pressure_with_viscosity_model(
             bc=PressureBC("inlet_xmin", "outlet_xmax", pin=1.0, pout=0.0),
             axis="x",
         )
+
+
+def test_fluid_reference_viscosity_raises_when_no_viscosity_source_remains() -> None:
+    """Reference-viscosity lookup fails loudly if both viscosity sources are absent."""
+
+    fluid = FluidSinglePhase(viscosity_model=_linear_viscosity_model())
+    fluid.viscosity = None
+    fluid.viscosity_model = None
+    with pytest.raises(ValueError, match="No viscosity or viscosity_model is available"):
+        fluid.reference_viscosity(pin=2.0, pout=1.0)

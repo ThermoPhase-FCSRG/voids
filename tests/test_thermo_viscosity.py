@@ -287,6 +287,33 @@ def test_tabulated_model_validates_backend_name() -> None:
         TabulatedWaterViscosityModel.from_backend("unknown", temperature=300.0)
 
 
+def test_tabulated_model_from_backend_dispatches_known_backend_names(monkeypatch) -> None:
+    """Backend-name dispatch builds thermo and coolprop models through the expected classes."""
+
+    class DummyThermoBackend:
+        name = "thermo"
+
+        def evaluate(self, pressure: np.ndarray, *, temperature: float) -> np.ndarray:
+            del temperature
+            return np.ones_like(pressure, dtype=float)
+
+    class DummyCoolPropBackend:
+        name = "coolprop"
+
+        def evaluate(self, pressure: np.ndarray, *, temperature: float) -> np.ndarray:
+            del temperature
+            return 2.0 * np.ones_like(pressure, dtype=float)
+
+    monkeypatch.setattr(thermo_module, "ThermoWaterViscosityBackend", DummyThermoBackend)
+    monkeypatch.setattr(thermo_module, "CoolPropWaterViscosityBackend", DummyCoolPropBackend)
+
+    thermo_model = TabulatedWaterViscosityModel.from_backend("thermo", temperature=300.0)
+    coolprop_model = TabulatedWaterViscosityModel.from_backend("coolprop", temperature=300.0)
+
+    assert thermo_model.backend_name == "thermo"
+    assert coolprop_model.backend_name == "coolprop"
+
+
 def test_tabulated_model_derivative_uses_cached_table(
     linear_model: TabulatedWaterViscosityModel,
 ) -> None:
