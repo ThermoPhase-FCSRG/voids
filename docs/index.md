@@ -12,8 +12,9 @@
 research workflows where reproducibility, explicit assumptions, and validation matter.
 
 The current project emphasis is a clean canonical network model, interoperability with
-PoreSpy/OpenPNM-style data, and a validated single-phase reference workflow before
-expanding to more complex physics.
+PoreSpy/OpenPNM-style data, and a validated single-phase workflow that now includes
+shape-aware conductance, pressure-dependent thermodynamic viscosity, and nonlinear
+solve options before expanding to more complex multiphase physics.
 
 ---
 
@@ -98,6 +99,10 @@ Those two goals are intentionally separated across the documentation tree:
 | Absolute and effective porosity | ✅ |
 | Connectivity metrics | ✅ |
 | Single-phase incompressible flow | ✅ |
+| Shape-aware Valvatne-Blunt conductance models | ✅ |
+| Pressure-dependent water viscosity via `thermo` / `CoolProp` | ✅ |
+| Damped Newton and Picard nonlinear solves | ✅ |
+| Krylov linear solvers with optional `pyamg` preconditioning | ✅ |
 | Directional permeability estimation | ✅ |
 | HDF5 serialization | ✅ |
 | Plotly and PyVista visualization | ✅ |

@@ -9,10 +9,12 @@ workflow that exercises the current single-phase solver.
 
 ### Recommended: Pixi
 
-The repository is configured for [Pixi](https://pixi.sh) and exposes three environments:
+The repository is configured for [Pixi](https://pixi.sh) and exposes four primary
+environments:
 
-- **`default`**: development + plotting + PyVista
-- **`test`**: everything in `default` plus OpenPNM and test-only dependencies
+- **`default`**: core runtime + development tools + plotting + PyVista + thermodynamic viscosity backends
+- **`test`**: `default` plus test-only dependencies used in the full verification suite
+- **`lbm`**: `test` plus the optional XLB direct-image benchmark stack
 - **`docs`**: MkDocs, mkdocs-material, and mkdocstrings for building this documentation
 
 ```bash
@@ -60,8 +62,11 @@ python -m pip install -e ".[viz]"
 # OpenPNM cross-check tests
 python -m pip install -e ".[test]"
 
+# Optional XLB benchmark stack
+python -m pip install -e ".[lbm]"
+
 # All extras
-python -m pip install -e ".[dev,viz,test,docs]"
+python -m pip install -e ".[dev,viz,test,lbm,docs]"
 ```
 
 ---
@@ -103,6 +108,40 @@ example, see [Concepts and Conventions](concepts.md).
 
 For extracted or imported networks, continue with
 [Scientific Workflow](workflow.md) rather than copying the synthetic example verbatim.
+
+### Pressure-Dependent Viscosity
+
+For water-property studies, `voids` can also solve with pressure-dependent viscosity:
+
+```python
+from voids.physics.singlephase import FluidSinglePhase, PressureBC, SinglePhaseOptions, solve
+from voids.physics.thermo import TabulatedWaterViscosityModel
+
+mu_model = TabulatedWaterViscosityModel.from_backend(
+    "thermo",
+    temperature=298.15,
+    pressure_points=128,
+)
+
+result = solve(
+    net,
+    fluid=FluidSinglePhase(viscosity_model=mu_model),
+    bc=PressureBC("inlet_xmin", "outlet_xmax", pin=2.0e5, pout=1.0e5),
+    axis="x",
+    options=SinglePhaseOptions(
+        conductance_model="valvatne_blunt",
+        nonlinear_solver="newton",
+        solver="gmres",
+        solver_parameters={"preconditioner": "pyamg"},
+    ),
+)
+```
+
+Two assumptions change in this mode:
+
+- pressures must be absolute and positive, typically in Pa
+- the nonlinear solve is with respect to the tabulated/interpolated constitutive law,
+  not the raw backend callable directly
 
 ---
 
