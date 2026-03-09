@@ -47,7 +47,8 @@ If you are new to the project, the shortest useful path is:
 3. [Scientific Workflow](workflow.md) for image-based or imported-network studies
 4. [Theoretical Background](background.md) for governing equations and assumptions
 5. [Examples](examples.md) for notebook-scale workflows
-6. [API Reference](api/index.md) for callable details
+6. [Verification & Validation](verification/index.md) for benchmark evidence
+7. [API Reference](api/index.md) for callable details
 
 ---
 

@@ -89,11 +89,19 @@ nav:
     - External pnextract / pnflow Benchmark Notebook: notebook_reports/15_mwe_external_pnflow_benchmark.md
     - Kabs Benchmark With Thermodynamic Viscosity: notebook_reports/16_mwe_viscosity_model_kabs_benchmark.md
     - Solver Options Benchmark Notebook: notebook_reports/17_mwe_solver_options_benchmark.md
-  - Verification:
+  - Verification & Validation:
     - Overview: verification/index.md
-    - OpenPNM Extracted-Network Cross-Check: verification/openpnm.md
-    - External pnextract / pnflow Benchmark: verification/pnflow.md
-    - XLB Direct-Image Permeability Benchmark: verification/xlb.md
+    - Verification:
+      - Software Verification Overview: verification/software.md
+      - OpenPNM Extracted-Network Cross-Check: verification/openpnm.md
+      - External pnextract / pnflow Benchmark: verification/pnflow.md
+      - XLB Direct-Image Permeability Benchmark: verification/xlb.md
+    - Validation:
+      - Experimental Validation Overview: validation/index.md
+      - DRP-317 Sandstone Validation Overview: validation/drp317.md
+      - DRP-317 Berea Notebook Report: validation/drp317_berea.md
+      - DRP-317 Bentheimer Notebook Report: validation/drp317_bentheimer.md
+      - DRP-317 Bandera Gray Notebook Report: validation/drp317_banderagray.md
   - Theoretical Background: background.md
   - API Reference:
     - Overview: api/index.md

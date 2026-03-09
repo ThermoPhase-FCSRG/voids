@@ -1,7 +1,11 @@
 # Benchmarks
 
 The `voids.benchmarks` sub-package provides utilities for cross-checking `voids`
-results against reference implementations such as OpenPNM and XLB.
+results against reference implementations such as OpenPNM and XLB. In the
+broader project documentation, these utilities belong to the **verification**
+side of the Verification & Validation split: they benchmark `voids` against
+software references or alternative numerical workflows, not directly against
+experimental measurements.
 
 The two high-level segmented-volume benchmark wrappers now share the same
 physical pressure convention:

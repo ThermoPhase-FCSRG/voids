@@ -20,3 +20,8 @@ stored outputs are already publication-style:
 
 The complete notebook inventory, including paired `.py` scripts, remains documented in
 [Examples](../examples.md).
+
+The DRP-317 sandstone studies are documented separately under
+[Verification & Validation / Validation](../validation/index.md), because those
+pages are written as experimental-validation reports rather than as frozen
+rendered notebook pages.

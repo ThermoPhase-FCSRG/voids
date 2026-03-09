@@ -19,7 +19,7 @@
 | [`voids.image`](image.md) | Image processing and connectivity helpers |
 | [`voids.visualization`](visualization.md) | Plotly and PyVista network rendering |
 | [`voids.simulators`](simulators.md) | Ready-to-run simulation entry points |
-| [`voids.benchmarks`](benchmarks.md) | Cross-check and validation utilities |
+| [`voids.benchmarks`](benchmarks.md) | Verification and validation benchmark utilities |
 
 ---
 

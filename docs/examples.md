@@ -49,6 +49,9 @@ In practice:
 | `15_mwe_external_pnflow_benchmark` | Compare `voids` against a committed external `pnextract` / `pnflow` reference |
 | `16_mwe_viscosity_model_kabs_benchmark` | Quantify `Kabs` drift under constant vs thermodynamic viscosity |
 | `17_mwe_solver_options_benchmark` | Compare direct, Krylov, nonlinear, and preconditioned solver choices |
+| `18_mwe_drp317_berea_raw_porosity_perm` | Validate the DRP-317 Berea case against experimental porosity and permeability |
+| `19_mwe_drp317_bentheimer_raw_porosity_perm` | Validate the DRP-317 Bentheimer case against experimental porosity and permeability |
+| `20_mwe_drp317_banderagray_raw_porosity_perm` | Validate the DRP-317 Bandera Gray case against experimental porosity and permeability |
 
 ---
 
@@ -176,7 +179,7 @@ extracts a network with PoreSpy, and compares resulting `Kabs` predictions betwe
 This notebook is the closest thing in the current tree to an end-to-end extraction
 and solver-comparison benchmark.
 The corresponding narrative report is documented in
-[Verification / OpenPNM Extracted-Network Cross-Check](verification/openpnm.md).
+[Verification & Validation / Verification / OpenPNM Extracted-Network Cross-Check](verification/openpnm.md).
 
 ---
 
@@ -196,7 +199,7 @@ why the preferred high-level input is `delta_p` rather than an absolute
 pressure level, and includes a full 15-case steady Stokes-limit rerun alongside the standard
 benchmark-mode comparison.
 The corresponding narrative report is documented in
-[Verification / XLB Direct-Image Permeability Benchmark](verification/xlb.md).
+[Verification & Validation / Verification / XLB Direct-Image Permeability Benchmark](verification/xlb.md).
 
 ---
 
@@ -213,7 +216,7 @@ This is the notebook to use when the scientific question is whether the current
 `voids` image-to-network workflow tracks an independent external PNM workflow
 closely enough on controlled synthetic cases.
 The corresponding narrative report is documented in
-[Verification / External pnextract / pnflow Benchmark](verification/pnflow.md).
+[Verification & Validation / Verification / External pnextract / pnflow Benchmark](verification/pnflow.md).
 
 ---
 
@@ -242,10 +245,68 @@ nonlinear strategy, and `pyamg` preconditioner is most effective for a given reg
 
 ---
 
+### 18 — DRP-317 Berea Validation
+
+**`18_mwe_drp317_berea_raw_porosity_perm`**
+
+Runs the current image-to-network workflow on the DRP-317 Berea sandstone volume and
+compares porosity and apparent permeability against the experimental values reported
+for the same rock sample.
+
+The corresponding narrative report is documented in
+[Verification & Validation / Validation / DRP-317 Berea Notebook Report](validation/drp317_berea.md).
+
+---
+
+### 19 — DRP-317 Bentheimer Validation
+
+**`19_mwe_drp317_bentheimer_raw_porosity_perm`**
+
+Runs the same validation workflow for the Bentheimer sandstone case from DRP-317,
+including ROI diagnostics, extracted-network porosity, and directional permeability.
+
+The corresponding narrative report is documented in
+[Verification & Validation / Validation / DRP-317 Bentheimer Notebook Report](validation/drp317_bentheimer.md).
+
+---
+
+### 20 — DRP-317 Bandera Gray Validation
+
+**`20_mwe_drp317_banderagray_raw_porosity_perm`**
+
+Runs the DRP-317 Bandera Gray validation case, which is currently the most demanding
+of the three because the permeability gap to experiment remains much larger than for
+Berea and Bentheimer.
+
+The corresponding narrative report is documented in
+[Verification & Validation / Validation / DRP-317 Bandera Gray Notebook Report](validation/drp317_banderagray.md).
+
+---
+
+## DRP-317 Data Source
+
+The three DRP-317 validation notebooks use the following sources and should cite them
+explicitly in downstream work:
+
+- Dataset: Neumann, R., ANDREETA, M., Lucas-Oliveira, E. (2020, October 7).
+  *11 Sandstones: raw, filtered and segmented data* [Dataset].
+  Digital Porous Media Portal. <https://www.doi.org/10.17612/f4h1-w124>
+- Experimental reference paper: Neumann, R. F., Barsi-Andreeta, M., Lucas-Oliveira, E.,
+  Barbalho, H., Trevizan, W. A., Bonagamba, T. J., & Steiner, M. B. (2021).
+  *High accuracy capillary network representation in digital rock reveals permeability scaling functions*.
+  *Scientific Reports, 11*, 11370. <https://doi.org/10.1038/s41598-021-90090-0>
+
+---
+
 ## Rendered Notebook Reports
 
 The notebooks below are also rendered directly into the docs from their committed
 `.ipynb` outputs, without re-executing them during the docs build:
+
+The DRP-317 experimental-comparison notebooks are documented separately under
+[Verification & Validation / Validation](validation/index.md) because those pages
+are written as experimental-validation reports rather than as frozen rendered
+notebook outputs.
 
 - [Notebook Reports Overview](notebook_reports/index.md)
 - [14 — Shape-Factor Conductance Comparison](notebook_reports/14_mwe_shape_factor_conductance_comparison.md)

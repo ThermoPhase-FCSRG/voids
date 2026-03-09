@@ -25,6 +25,23 @@
 # - Full-volume network extraction at this scale is expensive; by default, extraction runs on a centered ROI.
 #
 
+# %% [markdown]
+# ## Data source and citation
+#
+# These DRP-317 rock images come from:
+#
+# - Neumann, R., ANDREETA, M., Lucas-Oliveira, E. (2020, October 7).
+#   *11 Sandstones: raw, filtered and segmented data* [Dataset].
+#   Digital Porous Media Portal. <https://www.doi.org/10.17612/f4h1-w124>
+#
+# The experimental porosity and permeability targets used for comparison come from:
+#
+# - Neumann, R. F., Barsi-Andreeta, M., Lucas-Oliveira, E., Barbalho, H.,
+#   Trevizan, W. A., Bonagamba, T. J., & Steiner, M. B. (2021).
+#   *High accuracy capillary network representation in digital rock reveals permeability scaling functions*.
+#   *Scientific Reports, 11*, 11370. <https://doi.org/10.1038/s41598-021-90090-0>
+#
+
 # %%
 from itertools import product
 from pathlib import Path
@@ -58,6 +75,20 @@ voxel_size_m = voxel_size_um * 1.0e-6
 experimental_porosity_pct = 18.10
 experimental_kabs_mD = 9.0
 experimental_kabs_rel_error = 0.10  # +/-10%
+drp317_dataset_citation = (
+    "Neumann, R., ANDREETA, M., Lucas-Oliveira, E. (2020, October 7). "
+    "11 Sandstones: raw, filtered and segmented data [Dataset]. "
+    "Digital Porous Media Portal. https://www.doi.org/10.17612/f4h1-w124"
+)
+drp317_dataset_url = "https://digitalporousmedia.org/published-datasets/drp.project.published.DRP-317"
+drp317_paper_citation = (
+    "Neumann, R. F., Barsi-Andreeta, M., Lucas-Oliveira, E., Barbalho, H., "
+    "Trevizan, W. A., Bonagamba, T. J., & Steiner, M. B. (2021). "
+    "High accuracy capillary network representation in digital rock reveals "
+    "permeability scaling functions. Scientific Reports, 11, 11370. "
+    "https://doi.org/10.1038/s41598-021-90090-0"
+)
+drp317_paper_url = "https://www.nature.com/articles/s41598-021-90090-0#Sec13"
 
 # Paper-reference PNM controls:
 # - PoreSpy 1.2.0 extraction
@@ -412,6 +443,10 @@ def extract_axis_network(axis: str):
             "roi_shape_voxels": im_analysis.shape,
             "experimental_porosity_pct": experimental_porosity_pct,
             "experimental_kabs_mD": experimental_kabs_mD,
+            "dataset_citation": drp317_dataset_citation,
+            "dataset_url": drp317_dataset_url,
+            "paper_citation": drp317_paper_citation,
+            "paper_url": drp317_paper_url,
             "trim_nonpercolating_paths": trim_nonpercolating_paths,
             "conductance_models": list(conductance_models),
             "analysis_origin_strategy": analysis_origin_strategy,

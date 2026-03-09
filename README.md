@@ -182,9 +182,38 @@ The repository includes paired notebooks and `py:percent` scripts under `noteboo
   - benchmark of `Kabs` using constant viscosity versus pressure-dependent thermodynamic viscosity
 - `17_mwe_solver_options_benchmark`
   - benchmark of the available linear and nonlinear solver options, including `pyamg`-preconditioned Krylov solves
+- `18_mwe_drp317_berea_raw_porosity_perm`
+  - DRP-317 Berea validation notebook against experimental porosity and permeability
+- `19_mwe_drp317_bentheimer_raw_porosity_perm`
+  - DRP-317 Bentheimer validation notebook against experimental porosity and permeability
+- `20_mwe_drp317_banderagray_raw_porosity_perm`
+  - DRP-317 Bandera Gray validation notebook against experimental porosity and permeability
 
 Example data under `examples/data/` includes a deterministic manufactured void image and
 generated artifacts from the extraction/mesh notebooks.
+
+## Verification & Validation
+
+The project documentation now separates two kinds of evidence:
+
+- **Verification**: benchmarks against software references and controlled numerical workflows
+- **Validation**: benchmarks against experimental data
+
+Software-verification reports live under [`docs/verification/`](docs/verification/).
+Experimental-validation reports for the DRP-317 sandstones live under
+[`docs/validation/`](docs/validation/).
+
+### DRP-317 Data Citation
+
+The DRP-317 notebooks and validation reports use the following sources:
+
+- Dataset: Neumann, R., ANDREETA, M., Lucas-Oliveira, E. (2020, October 7).
+  *11 Sandstones: raw, filtered and segmented data* [Dataset].
+  Digital Porous Media Portal. <https://www.doi.org/10.17612/f4h1-w124>
+- Experimental reference paper: Neumann, R. F., Barsi-Andreeta, M., Lucas-Oliveira, E.,
+  Barbalho, H., Trevizan, W. A., Bonagamba, T. J., & Steiner, M. B. (2021).
+  *High accuracy capillary network representation in digital rock reveals permeability scaling functions*.
+  *Scientific Reports, 11*, 11370. <https://doi.org/10.1038/s41598-021-90090-0>
 
 ## Scientific Notes
 
