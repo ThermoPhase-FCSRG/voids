@@ -22,6 +22,7 @@ porespy = ">=2.4"
 openpnm = ">=3.6,<3.7"
 pyamg = ">=5.3"
 pyvista = ">=0.43"
+kaleido = ">=0.2.1"
 
 [target.unix.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
