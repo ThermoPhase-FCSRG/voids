@@ -32,6 +32,20 @@ def _broadcast_viscosity(viscosity: float | np.ndarray, shape: tuple[int, ...]) 
         raise ValueError(f"viscosity is not broadcastable to shape {shape}") from exc
 
 
+def _broadcast_finite(
+    values: float | np.ndarray, shape: tuple[int, ...], *, name: str
+) -> np.ndarray:
+    """Broadcast a finite scalar or array to the requested shape."""
+
+    arr = np.asarray(values, dtype=float)
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain only finite values")
+    try:
+        return np.broadcast_to(arr, shape).astype(float, copy=False)
+    except ValueError as exc:
+        raise ValueError(f"{name} is not broadcastable to shape {shape}") from exc
+
+
 def _resolve_pore_throat_viscosities(
     net: Network,
     viscosity: float | np.ndarray | None,
@@ -896,7 +910,11 @@ def throat_conductance_with_sensitivities(
             (net.Nt,),
         )
         dmu_t = (
-            _broadcast_viscosity(throat_dviscosity_dpressure, (net.Nt,))
+            _broadcast_finite(
+                throat_dviscosity_dpressure,
+                (net.Nt,),
+                name="throat_dviscosity_dpressure",
+            )
             if throat_dviscosity_dpressure is not None
             else np.zeros(net.Nt, dtype=float)
         )
@@ -922,7 +940,11 @@ def throat_conductance_with_sensitivities(
             (net.Nt,),
         )
         dmu_t = (
-            _broadcast_viscosity(throat_dviscosity_dpressure, (net.Nt,))
+            _broadcast_finite(
+                throat_dviscosity_dpressure,
+                (net.Nt,),
+                name="throat_dviscosity_dpressure",
+            )
             if throat_dviscosity_dpressure is not None
             else np.zeros(net.Nt, dtype=float)
         )
@@ -945,12 +967,20 @@ def throat_conductance_with_sensitivities(
             throat_viscosity=throat_viscosity,
         )
         dmu_p = (
-            _broadcast_viscosity(pore_dviscosity_dpressure, (net.Np,))
+            _broadcast_finite(
+                pore_dviscosity_dpressure,
+                (net.Np,),
+                name="pore_dviscosity_dpressure",
+            )
             if pore_dviscosity_dpressure is not None
             else np.zeros(net.Np, dtype=float)
         )
         dmu_t = (
-            _broadcast_viscosity(throat_dviscosity_dpressure, (net.Nt,))
+            _broadcast_finite(
+                throat_dviscosity_dpressure,
+                (net.Nt,),
+                name="throat_dviscosity_dpressure",
+            )
             if throat_dviscosity_dpressure is not None
             else np.zeros(net.Nt, dtype=float)
         )

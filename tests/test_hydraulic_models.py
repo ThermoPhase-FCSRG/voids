@@ -506,6 +506,29 @@ def test_generic_poiseuille_sensitivity_matches_analytic_expression(line_network
     assert np.allclose(dg_dpj, expected_dg)
 
 
+def test_conductance_sensitivities_accept_negative_viscosity_derivatives(
+    line_network: Network,
+) -> None:
+    """Pressure derivatives of viscosity may be negative and should remain valid."""
+
+    net = line_network.copy()
+    net.throat.pop("hydraulic_conductance", None)
+    net.throat["diameter_inscribed"] = np.ones(net.Nt)
+    net.throat["length"] = np.ones(net.Nt)
+
+    g, dg_dpi, dg_dpj = throat_conductance_with_sensitivities(
+        net,
+        viscosity=None,
+        model="generic_poiseuille",
+        throat_viscosity=np.array([2.0, 2.0]),
+        throat_dviscosity_dpressure=np.array([-1.0, -2.0]),
+    )
+
+    assert np.isfinite(g).all()
+    assert np.isfinite(dg_dpi).all()
+    assert np.isfinite(dg_dpj).all()
+
+
 def test_valvatne_conduit_sensitivity_matches_finite_difference(line_network: Network) -> None:
     """Conduit sensitivity agrees with a finite-difference perturbation."""
 
