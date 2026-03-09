@@ -49,8 +49,9 @@ repos:
   hooks:
     - id: jupytext-sync
       name: jupytext-sync
-      entry: jupytext --sync
+      entry: python scripts/sync_notebooks.py
       language: python
       additional_dependencies:
         - jupytext>=1.19.1,<2
+      pass_filenames: false
       files: '^notebooks/.*\.(ipynb|py)$'
