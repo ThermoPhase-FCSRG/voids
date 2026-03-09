@@ -76,6 +76,32 @@ class PressureViscosityTable:
             return np.full_like(p_clipped, self.viscosity[0], dtype=float)
         return np.asarray(self._interpolator(p_clipped), dtype=float)
 
+    def derivative(self, pressure: float | np.ndarray) -> np.ndarray:
+        """Evaluate ``dmu/dp`` from the clipped pressure interpolant.
+
+        Notes
+        -----
+        Because out-of-range queries are clipped to the tabulated interval, the
+        effective derivative is zero outside the interval.
+        """
+
+        p = _as_float_array(pressure)
+        _require_positive_finite(p, name="pressure")
+        if self._interpolator is None:
+            return np.zeros_like(p, dtype=float)
+        out = np.zeros_like(p, dtype=float)
+        inside = (p >= self.pressure[0]) & (p <= self.pressure[-1])
+        if np.any(inside):
+            out[inside] = np.asarray(self._interpolator.derivative()(p[inside]), dtype=float)
+        return out
+
+    def evaluate_with_derivative(
+        self, pressure: float | np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return viscosity and pressure derivative from the clipped interpolant."""
+
+        return self.evaluate(pressure), self.derivative(pressure)
+
     __call__ = evaluate
 
 
@@ -271,6 +297,24 @@ class TabulatedWaterViscosityModel:
 
         table = self.table_for_bounds(pin=pin, pout=pout)
         return table.evaluate(pressure)
+
+    def derivative(self, pressure: float | np.ndarray, *, pin: float, pout: float) -> np.ndarray:
+        """Evaluate ``dmu/dp`` through the cached pressure interpolator."""
+
+        table = self.table_for_bounds(pin=pin, pout=pout)
+        return table.derivative(pressure)
+
+    def evaluate_with_derivative(
+        self,
+        pressure: float | np.ndarray,
+        *,
+        pin: float,
+        pout: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return viscosity and ``dmu/dp`` through the cached interpolator."""
+
+        table = self.table_for_bounds(pin=pin, pout=pout)
+        return table.evaluate_with_derivative(pressure)
 
     def reference_viscosity(self, *, pin: float, pout: float) -> float:
         """Return the midpoint viscosity across the imposed pressure interval."""
