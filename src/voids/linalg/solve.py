@@ -1,29 +1,62 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol, cast
 
 import numpy as np
 from scipy import sparse
-from scipy.sparse.linalg import cg, gmres, spsolve
+from scipy.sparse.linalg import LinearOperator, cg, gmres, spsolve
 
 
-def _import_pyamg():
+class _PyAMGHierarchy(Protocol):
+    """Minimal typed surface used from a PyAMG multilevel hierarchy."""
+
+    levels: list[object]
+
+    def aspreconditioner(self) -> LinearOperator[np.float64]:
+        """Return a SciPy-compatible preconditioner."""
+
+    def operator_complexity(self) -> float:
+        """Return the operator complexity."""
+
+
+class _PyAMGModule(Protocol):
+    """Minimal typed subset of the top-level ``pyamg`` module."""
+
+    def smoothed_aggregation_solver(
+        self, matrix: sparse.csr_matrix, **kwargs: object
+    ) -> _PyAMGHierarchy:
+        """Build a smoothed-aggregation hierarchy."""
+
+    def rootnode_solver(self, matrix: sparse.csr_matrix, **kwargs: object) -> _PyAMGHierarchy:
+        """Build a root-node hierarchy."""
+
+    def ruge_stuben_solver(self, matrix: sparse.csr_matrix, **kwargs: object) -> _PyAMGHierarchy:
+        """Build a classical AMG hierarchy."""
+
+
+type SolverParameterValue = (
+    str | float | int | bool | dict[str, object] | LinearOperator[np.float64]
+)
+type SolverParameters = dict[str, SolverParameterValue]
+
+
+def _import_pyamg() -> _PyAMGModule:
     """Import PyAMG lazily so the dependency remains easy to diagnose."""
 
     try:
-        import pyamg
+        import pyamg  # type: ignore[import-untyped]
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise ImportError(
             "PyAMG preconditioning requires the 'pyamg' package to be installed."
         ) from exc
-    return pyamg
+    return cast(_PyAMGModule, pyamg)
 
 
 def _build_preconditioner(
     A: sparse.csr_matrix,
     *,
-    solver_parameters: dict[str, Any] | None,
-) -> tuple[Any | None, dict[str, Any]]:
+    solver_parameters: SolverParameters | None,
+) -> tuple[LinearOperator[np.float64] | None, dict[str, str | float | int]]:
     """Build an optional Krylov preconditioner from solver parameters."""
 
     parameters = dict(solver_parameters or {})
@@ -67,8 +100,8 @@ def solve_linear_system(
     b: np.ndarray,
     *,
     method: str = "direct",
-    solver_parameters: dict[str, Any] | None = None,
-) -> tuple[np.ndarray, dict[str, Any]]:
+    solver_parameters: SolverParameters | None = None,
+) -> tuple[np.ndarray, dict[str, str | float | int]]:
     """Solve a sparse linear system with one of the supported SciPy backends.
 
     Parameters
