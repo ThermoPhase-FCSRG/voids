@@ -54,6 +54,8 @@ register-kernels = "pixi run -e default python -m ipykernel install --user --nam
 unregister-kernels = "python -m jupyter kernelspec uninstall -f voids-default voids-test"
 bump-version = "python scripts/bump_version.py"
 sync-deps = "python scripts/sync_deps.py"
+notebooks-sync = "python scripts/sync_notebooks.py"
+precommit-sync = "python scripts/sync_notebooks.py && pre-commit run --all-files"
 docs-build = "pixi run -e docs mkdocs build"
 docs-serve = "pixi run -e docs mkdocs serve"
 
