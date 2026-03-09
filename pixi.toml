@@ -20,6 +20,7 @@ plotly = ">=5.0"
 voids = { path = ".", editable = true }
 porespy = ">=2.4"
 openpnm = ">=3.6,<3.7"
+pyamg = ">=5.3"
 pyvista = ">=0.43"
 
 [target.unix.activation.env]
