@@ -18811,7 +18811,7 @@ packages:
 - pypi: ./
   name: voids
   version: 0.1.5
-  sha256: 6c2cc79cc34dc1aed5ef567b734f07847847d0db34aee9f909cfaeaa65571461
+  sha256: b4d342ab17f98d824b96d99ffac02789ce56164181bee4bbd3f02327f1f28016
   requires_dist:
   - numpy>=1.26,<2.2
   - scipy>=1.11
@@ -18819,6 +18819,7 @@ packages:
   - porespy>=2.4
   - openpnm>=3.6,<3.7
   - pyamg>=5.3
+  - pypardiso>=0.4 ; sys_platform == 'linux'
   - thermo>=0.6.0,<0.7
   - coolprop>=6.6
   - h5py>=3.10
